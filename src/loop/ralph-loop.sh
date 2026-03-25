@@ -1512,7 +1512,6 @@ SAFETY CONSTRAINTS (mandatory, never violate):
 - NEVER delete any existing file unless the task explicitly requires deletion
 - NEVER modify .gitignore files
 - NEVER modify CLAUDE.md
-- NEVER modify files in .ai/ directory
 - NEVER modify files in src/loop/ directory (you are a worker, not a maintainer)
 - Only create or modify files that are directly required by the task
 - NEVER run 'git add artifacts/' or 'git add .' or 'git add -A' — always stage files explicitly by path
