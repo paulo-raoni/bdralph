@@ -49,7 +49,7 @@ Read in this order before making any change:
 - **Milestone-first** — one milestone at a time, no exceptions
 - **Evidence-gated** — a milestone is not done until its gate criteria pass
 - **Minimalism** — if it is not needed now, do not add it
-- **Governance over improvisation** — every structural decision must be recorded in `DECISIONS.md`
+- **Governance over improvisation** — every structural decision must be recorded in `docs/DECISIONS.md`
 
 ---
 
@@ -57,8 +57,8 @@ Read in this order before making any change:
 
 ### Before starting any task
 
-1. Read `PROGRESS.md` to confirm the current milestone scope.
-2. Read `DECISIONS.md` to understand key decisions already made.
+1. Read `docs/PROGRESS.md` to confirm the current milestone scope.
+2. Read `docs/DECISIONS.md` to understand key decisions already made.
 3. Confirm the task does not touch sensitive paths (see Section 8).
 4. If the task involves code changes, run the baseline health check:
 
@@ -103,7 +103,7 @@ Missing the documentation declaration invalidates the delivery.
 
 Do not implement future milestones. Do not expand scope. Do not merge concerns from different milestones into one branch.
 
-If work reveals a gap belonging to a future milestone, record it as a finding in `BACKLOG.md` and continue.
+If work reveals a gap belonging to a future milestone, record it as a finding in `docs/BACKLOG.md` and continue.
 
 Backlog items are future ideas, not committed scope. Never implement them without explicit operator instruction.
 
@@ -128,7 +128,7 @@ BDRALPH_E2E_MODE=no-llm npx vitest run --config vitest.e2e.config.ts
 A delivery where any gate fails is not a delivery.
 
 **Exception — documentation-only PRs:**
-PRs modifying exclusively `.md` files or `PROGRESS.md` require only:
+PRs modifying exclusively `.md` files or `docs/PROGRESS.md` require only:
 ```bash
 npm run typecheck
 ```
