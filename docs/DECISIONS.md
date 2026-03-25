@@ -24,3 +24,4 @@ Index of key design decisions. One line per decision. For full detail, see `deci
 | M0-14 | Provider chain env vars use BDRALPH_ prefix (not RALPH_) | decisions/M0.md |
 | M0-15 | Branch naming convention: feat/mN-description, fix/, chore/, doc/, bootstrap/ | decisions/M0.md |
 | M0-16 | Governance files moved to docs/ — CLAUDE.md and README.md stay at root | docs/decisions/M0.md |
+| M0-17 | Executor invocation contract: --dangerously-skip-permissions for Claude Code, --dangerously-bypass-approvals-and-sandbox for Codex, Always proceed for Antigravity | docs/decisions/M0.md |

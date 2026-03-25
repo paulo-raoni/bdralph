@@ -224,4 +224,23 @@ Do not implement. Do not work around it silently.
 
 ---
 
+## 14. Executor Invocation
+
+When running an implementation prompt, use the following commands to avoid manual approval at each step.
+
+**Claude Code CLI** (inside devcontainer):
+
+    claude --dangerously-skip-permissions < prompt.md
+
+**Codex CLI** (inside devcontainer):
+
+    codex exec --dangerously-bypass-approvals-and-sandbox < prompt.md
+
+**Antigravity** (desktop IDE — no CLI headless mode):
+Set Terminal Policy to **Always proceed** and Agent mode to **Agent-driven** in Antigravity Settings before passing the prompt. There is no command-line flag equivalent.
+
+These modes bypass per-action approval prompts. Only use inside the devcontainer or a trusted isolated environment.
+
+---
+
 *This file may only be modified with explicit operator approval.*
