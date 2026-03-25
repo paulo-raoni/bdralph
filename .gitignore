@@ -1,1 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
 .devcontainer/.env
+.env
+.env.*
+!.env.example
+
+# Runtime artifacts
+artifacts/
+logs/
+*.log
+tmp/
+temp/
+
+# E2E runtime snapshots (created/destroyed by tests)
+fixtures/e2e/e2e-*/
+
+# OS
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Claude local settings
+.claude/settings.local.json
