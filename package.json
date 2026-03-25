@@ -3,9 +3,16 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "test": "echo \"No tests yet — M0 will add them\"",
+    "test": "cd fixtures/playground && npm test",
+    "test:watch": "cd fixtures/playground && npm run test:watch",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "build": "echo \"No build yet — M1b will add it\"",
     "lint": "echo \"No lint yet — M1b will add it\"",
-    "typecheck": "echo \"No typecheck yet — M1b will add it\""
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.0.0"
   }
 }
