@@ -38,6 +38,7 @@ Any change to this array must be reflected in this README.
 | Variable | Default | Description |
 |---|---|---|
 | `BDRALPH_NO_UI` | — | Set to `1` to disable the terminal UI (CI, headless) |
+| `BDRALPH_INK_UI` | — | Set to `1` to enable the Ink terminal renderer (requires interactive TTY) |
 | `BDRALPH_L2_PROVIDER_CHAIN` | `openai-cheap gemini-flash` | Space-separated L2 provider chain |
 | `BDRALPH_L3_PROVIDER_CHAIN` | `openai-standard gemini-flash openai-mini` | Space-separated L3 provider chain |
 | `BDRALPH_PROVIDER_FAILOVER` | `notify` | `notify` or `pause` on provider failover |

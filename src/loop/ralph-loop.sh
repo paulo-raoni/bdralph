@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ralph-loop.sh — Adaptive optimization loop.
+# ralph-loop.sh — bdralph core loop.
 # Orchestrates Claude Code as worker and llm-delegate.sh as reviewer,
 # with cost guard, hierarchical fallback, 4-layer review pipeline
 # (L1 sensitivity → L2 protocol → L3 quality → L4 governance),
