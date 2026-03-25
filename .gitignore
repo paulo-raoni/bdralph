@@ -12,8 +12,13 @@ build/
 !.env.example
 
 # Runtime artifacts
-artifacts/
-logs/
+artifacts/*
+!artifacts/bdralph/
+artifacts/bdralph/*
+!artifacts/bdralph/.gitignore
+logs/*.log
+logs/*.jsonl
+logs/*.md
 *.log
 tmp/
 temp/
