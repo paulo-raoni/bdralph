@@ -29,3 +29,6 @@ fixtures/e2e/e2e-*/
 
 # Claude local settings
 .claude/settings.local.json
+
+# Factory reference zip (temporary, remove after extraction)
+agentic-factory-core-full.zip
