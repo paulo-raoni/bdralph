@@ -1,5 +1,11 @@
 {
   "name": "bdralph",
   "version": "0.0.1",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "echo \"No tests yet — M0 will add them\"",
+    "build": "echo \"No build yet — M1b will add it\"",
+    "lint": "echo \"No lint yet — M1b will add it\"",
+    "typecheck": "echo \"No typecheck yet — M1b will add it\""
+  }
 }
