@@ -29,7 +29,7 @@ ESCALATE_AFTER=3
 TASK=""
 
 # SENSITIVE_PATHS — source of truth for automatic L1→L4 escalation.
-# Any change to this array MUST be reflected in src/loop/README.md.
+# Any change to this array MUST be reflected in docs/loop.md.
 SENSITIVE_PATHS=(
   "CLAUDE.md"
   "docs/PROGRESS.md"
@@ -151,7 +151,7 @@ UI_OWNER_PID="${BASHPID:-$$}"
 UI_STATE_ENABLED="$UI_ENABLED"
 
 # --- ink renderer ---
-# RALPH_INK_UI=1 is set by RalphCommandHandler when invoked via `agentic ralph`.
+# BDRALPH_INK_UI=1 is set when the Ink renderer is active.
 # Suppresses bash Phase 1 UI and starts the ink renderer instead.
 RALPH_INK_ACTIVE=false
 INK_RENDERER_PID=""
