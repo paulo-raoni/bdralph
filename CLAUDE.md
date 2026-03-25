@@ -38,9 +38,9 @@ Claude Code Extension → reviews LOCAL changes in plan mode (not the PR)
 
 Read in this order before making any change:
 
-- `PROGRESS.md` — what milestones are done, in progress, and next
-- `DECISIONS.md` — index of key decisions, points to `decisions/MN.md` for detail
-- `BACKLOG.md` — future ideas, not committed scope
+- `docs/PROGRESS.md` — what milestones are done, in progress, and next
+- `docs/DECISIONS.md` — index of key decisions, points to `docs/decisions/MN.md` for detail
+- `docs/BACKLOG.md` — future ideas, not committed scope
 
 ---
 
@@ -139,10 +139,10 @@ npm run typecheck
 
 ```
 CLAUDE.md
-PROGRESS.md
-BACKLOG.md
-DECISIONS.md
-decisions/
+docs/PROGRESS.md
+docs/BACKLOG.md
+docs/DECISIONS.md
+docs/decisions/
 .githooks/
 ```
 

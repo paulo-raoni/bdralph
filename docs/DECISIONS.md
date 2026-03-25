@@ -20,6 +20,7 @@ Index of key design decisions. One line per decision. For full detail, see `deci
 | M0-10 | Agnostic mode: executor CLI, not LLM via API directly | decisions/M0.md |
 | M0-11 | Continuous Awareness Mode: discarded (Second Mind is not an active sentinel) | decisions/M0.md |
 | M0-12 | Playground: internal fixture, not external repo | decisions/M0.md |
-| M0-13 | Sensitive paths: CLAUDE.md, PROGRESS.md, BACKLOG.md, DECISIONS.md, decisions/, .githooks/ | decisions/M0.md |
+| M0-13 | Sensitive paths: CLAUDE.md, docs/PROGRESS.md, docs/BACKLOG.md, docs/DECISIONS.md, docs/decisions/, .githooks/ | docs/decisions/M0.md |
 | M0-14 | Provider chain env vars use BDRALPH_ prefix (not RALPH_) | decisions/M0.md |
 | M0-15 | Branch naming convention: feat/mN-description, fix/, chore/, doc/, bootstrap/ | decisions/M0.md |
+| M0-16 | Governance files moved to docs/ — CLAUDE.md and README.md stay at root | docs/decisions/M0.md |
