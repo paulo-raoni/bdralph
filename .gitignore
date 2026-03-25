@@ -12,8 +12,13 @@ build/
 !.env.example
 
 # Runtime artifacts
-artifacts/
-logs/
+artifacts/*
+!artifacts/bdralph/
+artifacts/bdralph/*
+!artifacts/bdralph/.gitignore
+logs/*.log
+logs/*.jsonl
+logs/*.md
 *.log
 tmp/
 temp/
@@ -29,3 +34,6 @@ fixtures/e2e/e2e-*/
 
 # Claude local settings
 .claude/settings.local.json
+
+# Factory reference zip (temporary, remove after extraction)
+agentic-factory-core-full.zip

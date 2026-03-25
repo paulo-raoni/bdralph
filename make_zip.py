@@ -48,6 +48,8 @@ for dirpath, dirnames, filenames in os.walk(ROOT):
     for fname in filenames:
         if is_env_file(fname):
             continue
+        if fname.endswith('.zip'):
+            continue
         files.append(Path(dirpath) / fname)
 
 files = [f for f in files if f != OUTPUT]

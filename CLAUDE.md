@@ -133,6 +133,16 @@ PRs modifying exclusively `.md` files or `docs/PROGRESS.md` require only:
 npm run typecheck
 ```
 
+**Gate policy by PR type:**
+
+| PR type | Gates required |
+|---|---|
+| Code changes (any `.ts`, `.sh`, `.js`, `.py`) | `npm test` + `npm run typecheck` |
+| Config changes (`.json`, `.gitignore`, `vitest.*.config.ts`) | `npm run typecheck` |
+| Documentation only (`.md` files, `docs/`) | none |
+
+When in doubt, run all gates.
+
 ---
 
 ## 8. Sensitive Paths — Never modify without explicit operator approval
