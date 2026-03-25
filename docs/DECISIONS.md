@@ -1,6 +1,6 @@
 # DECISIONS — bdralph
 
-Index of key design decisions. One line per decision. For full detail, see `decisions/MN.md`.
+Index of key design decisions. One line per decision. For full detail, see `docs/decisions/MN.md`.
 
 ---
 
