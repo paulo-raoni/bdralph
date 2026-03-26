@@ -3,10 +3,11 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["tests", "vitest.e2e.config.ts"]
+  "include": ["src", "tests", "vitest.e2e.config.ts", "vitest.config.ts"]
 }
