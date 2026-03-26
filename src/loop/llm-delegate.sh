@@ -11,6 +11,7 @@ set -euo pipefail
 # openai-cheap       → gpt-5.4-nano        → OpenAI Chat Completions
 # openai-standard    → gpt-5.4-mini        → OpenAI Chat Completions
 # gemini-flash       → gemini-2.5-flash    → Google Generative Language
+# gemini-sdk         → gemini-2.5-flash    → @google/generative-ai SDK
 # ─────────────────────────────────────────────────────────────────────────────
 
 PROVIDER="${1:-}"
@@ -18,7 +19,7 @@ PROMPT="${2:-}"
 
 if [ -z "$PROVIDER" ] || [ -z "$PROMPT" ]; then
   echo "Usage: $0 <provider> <prompt>" >&2
-  echo "Providers: openai-mini, openai-cheap, openai-standard, gemini-flash" >&2
+  echo "Providers: openai-mini, openai-cheap, openai-standard, gemini-flash, gemini-sdk" >&2
   exit 1
 fi
 
@@ -135,8 +136,19 @@ elif [ "$PROVIDER" = "gemini-flash" ]; then
   node -e "const d=require('/tmp/llm_response.json'); process.stdout.write(d.candidates[0].content.parts[0].text)"
   write_usage "gemini-flash" "0.30" "2.50" ".usageMetadata.promptTokenCount" ".usageMetadata.candidatesTokenCount"
 
+# gemini-sdk -> gemini-2.5-flash via @google/generative-ai SDK
+# (to upgrade: change only the model ID passed to gemini.ts)
+elif [ "$PROVIDER" = "gemini-sdk" ]; then
+  if [ -z "${GOOGLE_API_KEY:-}" ]; then
+    echo "ERROR: GOOGLE_API_KEY is not set" >&2
+    exit 1
+  fi
+  GEMINI_MODEL="${BDRALPH_GEMINI_MODEL:-gemini-2.5-flash}"
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  npx tsx "$SCRIPT_DIR/providers/gemini.ts" "$GEMINI_MODEL" "$PROMPT"
+
 else
-  echo "ERROR: Unknown provider '$PROVIDER'. Use: openai-mini, openai-cheap, openai-standard, gemini-flash" >&2
+  echo "ERROR: Unknown provider '$PROVIDER'. Use: openai-mini, openai-cheap, openai-standard, gemini-flash, gemini-sdk" >&2
   exit 1
 fi
 
