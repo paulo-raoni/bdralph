@@ -132,6 +132,7 @@ rm -f "$RALPH_DIR/review-feedback.txt"
 rm -f "$RALPH_DIR/work-complete.txt"
 rm -f "$RALPH_DIR/work-summary.txt"
 rm -f "$RALPH_DIR/.bdralph-complete"
+rm -rf "$RALPH_DIR/traces"
 
 # --- UI auto-detect ---
 UI_ENABLED=true
@@ -943,6 +944,8 @@ WARNING: Git detection unavailable. No verified file list.
     ui_set_agent_state l1 done "WARN" 0
     ui_write_value l1_tokens "0"
     status_echo "  ⚠️  L1: git detection unavailable"
+    write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
+      '"sensitive_paths_matched": [], "files_checked": 0, "escalated_to_l4": false'
     return 0
   fi
 
@@ -958,6 +961,8 @@ WARNING: No file changes detected in working tree.
     ui_set_agent_state l1 done "WARN" 0
     ui_write_value l1_tokens "0"
     status_echo "  ⚠️  L1: no changes detected"
+    write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
+      '"sensitive_paths_matched": [], "files_checked": 0, "escalated_to_l4": false'
     return 0
   fi
 
@@ -991,6 +996,13 @@ $(echo -e "$sensitive_found")
     ui_set_agent_state l1 done "SENSITIVE" 0
     ui_write_value l1_tokens "0"
     status_echo "  🔴 L1: sensitive files detected — escalating to L4"
+    local l1_sensitive_list
+    l1_sensitive_list=$(echo -e "$sensitive_found" | sed '/^$/d' | \
+      node -e "const lines=require('fs').readFileSync('/dev/stdin','utf8').trim().split('\n').filter(Boolean); process.stdout.write(JSON.stringify(lines));")
+    local l1_file_count
+    l1_file_count=$(echo "$VERIFIED_FILE_LIST" | grep -c . 2>/dev/null || echo "0")
+    write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
+      "\"sensitive_paths_matched\": ${l1_sensitive_list}, \"files_checked\": ${l1_file_count}, \"escalated_to_l4\": true"
     return 0
   fi
 
@@ -1008,7 +1020,66 @@ No sensitive paths detected.
   ui_set_agent_state l1 done "PASS" 0
   ui_write_value l1_tokens "0"
   status_echo "  ✅ L1: clean — $(echo "$VERIFIED_FILE_LIST" | wc -l | tr -d ' ') file(s) verified"
+  local l1_clean_count
+  l1_clean_count=$(echo "$VERIFIED_FILE_LIST" | grep -c . 2>/dev/null || echo "0")
+  write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
+    "\"sensitive_paths_matched\": [], \"files_checked\": ${l1_clean_count}, \"escalated_to_l4\": false"
   return 0
+}
+
+# --- write_trace ---
+# Writes a JSON trace file for a layer after execution.
+# Args: <layer> <iteration> <result> <cost_usd> <input_tokens> <output_tokens> <provider> <feedback> [extra_json]
+# extra_json: optional additional JSON fields without leading comma, e.g. '"escalated_to_l4": true'
+write_trace() {
+  local layer="$1"
+  local iteration="$2"
+  local result="$3"
+  local cost_usd="$4"
+  local input_tokens="$5"
+  local output_tokens="$6"
+  local provider="$7"
+  local feedback="$8"
+  local extra_json="${9:-}"
+
+  local traces_dir="$RALPH_DIR/traces"
+  mkdir -p "$traces_dir"
+
+  local trace_file="$traces_dir/${layer}-iteration-${iteration}.json"
+  local ts_end
+  ts_end="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  local provider_field
+  if [ "$provider" = "null" ]; then
+    provider_field="null"
+  else
+    provider_field="\"$provider\""
+  fi
+
+  local feedback_safe
+  feedback_safe=$(echo "$feedback" | tr -d '\000-\031' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
+
+  local extra_block=""
+  if [ -n "$extra_json" ]; then
+    extra_block=", $extra_json"
+  fi
+
+  node -e "
+    const trace = {
+      session_id: '$SESSION_ID',
+      iteration: $iteration,
+      layer: '$layer',
+      timestamp_start: new Date().toISOString(),
+      timestamp_end: '$ts_end',
+      duration_ms: 0,
+      result: '$result',
+      cost_usd: $cost_usd,
+      tokens: { input: $input_tokens, output: $output_tokens },
+      provider: $provider_field,
+      feedback: \"$feedback_safe\"${extra_block}
+    };
+    require('fs').writeFileSync('$trace_file', JSON.stringify(trace, null, 2) + '\n');
+  " 2>/dev/null || true
 }
 
 # --- _build_governance_context ---
@@ -1200,6 +1271,11 @@ REVISE: [one paragraph of specific actionable feedback]"
     if echo "$l4_result" | head -1 | grep -q "^SHIP"; then
       ui_set_agent_state l4 done "SHIP" 0
       ui_write_value l4_tokens ""
+      write_trace "l4" "$iteration" "SHIP" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "openai-standard" "L4 governance review passed" \
+        '"triggered_by": ["l1_escalation"], "consecutive_revises_at_trigger": 0, "l1_escalated": true'
       REVIEW_OUTPUT="SHIP"
     else
       local l4_feedback
@@ -1210,6 +1286,11 @@ REVISE: [one paragraph of specific actionable feedback]"
 $l4_feedback"
       ui_set_agent_state l4 done "REVISE" 0
       ui_write_value l4_tokens ""
+      write_trace "l4" "$iteration" "REVISE" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "openai-standard" "$l4_feedback" \
+        '"triggered_by": ["l1_escalation"], "consecutive_revises_at_trigger": 0, "l1_escalated": true'
       REVIEW_OUTPUT="REVISE: $consolidated_feedback"
     fi
     return 0
@@ -1256,6 +1337,11 @@ $l2_feedback"
       fi
       ui_set_agent_state l2 done "$l2_fail_detail" 0
       ui_write_value l2_tokens "$LAST_LLM_TOTAL_TOKENS"
+      write_trace "l2" "$iteration" "REVISE" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "${LAYER_ACTIVE_PROVIDER:-${L2_PROVIDER_CHAIN[0]}}" \
+        "$l2_feedback"
       REVIEW_OUTPUT="REVISE: $consolidated_feedback"
       return 0
     fi
@@ -1266,6 +1352,11 @@ $l2_feedback"
     fi
     ui_set_agent_state l2 done "$l2_detail" 0
     ui_write_value l2_tokens "$LAST_LLM_TOTAL_TOKENS"
+    write_trace "l2" "$iteration" "PASS" \
+      "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+      "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+      "${LAYER_ACTIVE_PROVIDER:-${L2_PROVIDER_CHAIN[0]}}" \
+      "L2 protocol check passed"
     consolidated_feedback="$consolidated_feedback
 
 [L2 — Protocol Check: PASS]"
@@ -1328,6 +1419,11 @@ ESCALATE when ANY of these apply:
       fi
       ui_set_agent_state l3 done "$l3_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
+      write_trace "l3" "$iteration" "SHIP" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "${LAYER_ACTIVE_PROVIDER:-${L3_PROVIDER_CHAIN[0]}}" \
+        "L3 quality review passed"
       REVIEW_OUTPUT="SHIP"
       return 0
     elif echo "$l3_result" | head -1 | grep -q "^ESCALATE"; then
@@ -1339,6 +1435,11 @@ ESCALATE when ANY of these apply:
       fi
       ui_set_agent_state l3 done "$l3_escalate_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
+      write_trace "l3" "$iteration" "PASS" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "${LAYER_ACTIVE_PROVIDER:-${L3_PROVIDER_CHAIN[0]}}" \
+        "$escalation_reason"
       ui_set_agent_state l4 active "" 0
       status_echo "  ⬆️  Escalating to L4: $escalation_reason"
       consolidated_feedback="$consolidated_feedback
@@ -1359,6 +1460,11 @@ $l3_feedback"
       fi
       ui_set_agent_state l3 done "$l3_revise_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
+      write_trace "l3" "$iteration" "REVISE" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "${LAYER_ACTIVE_PROVIDER:-${L3_PROVIDER_CHAIN[0]}}" \
+        "$l3_feedback"
       REVIEW_OUTPUT="REVISE: $consolidated_feedback"
       return 0
     else
@@ -1373,6 +1479,11 @@ $l3_result"
       fi
       ui_set_agent_state l3 done "$l3_unknown_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
+      write_trace "l3" "$iteration" "REVISE" \
+        "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+        "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+        "${LAYER_ACTIVE_PROVIDER:-${L3_PROVIDER_CHAIN[0]}}" \
+        "$l3_result"
       REVIEW_OUTPUT="REVISE: $consolidated_feedback"
       return 0
     fi
@@ -1426,6 +1537,11 @@ REVISE: [one paragraph of specific actionable feedback]"
   if echo "$l4_result" | head -1 | grep -q "^SHIP"; then
     ui_set_agent_state l4 done "SHIP" 0
     ui_write_value l4_tokens ""
+    write_trace "l4" "$iteration" "SHIP" \
+      "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+      "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+      "openai-standard" "L4 governance review passed" \
+      "\"triggered_by\": [\"consecutive_revises\"], \"consecutive_revises_at_trigger\": $CONSECUTIVE_REVISES, \"l1_escalated\": false"
     REVIEW_OUTPUT="SHIP"
   else
     local l4_feedback
@@ -1436,6 +1552,11 @@ REVISE: [one paragraph of specific actionable feedback]"
 $l4_feedback"
     ui_set_agent_state l4 done "REVISE" 0
     ui_write_value l4_tokens ""
+    write_trace "l4" "$iteration" "REVISE" \
+      "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+      "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+      "openai-standard" "$l4_feedback" \
+      "\"triggered_by\": [\"consecutive_revises\"], \"consecutive_revises_at_trigger\": $CONSECUTIVE_REVISES, \"l1_escalated\": false"
     REVIEW_OUTPUT="REVISE: $consolidated_feedback"
   fi
   return 0
@@ -1481,6 +1602,7 @@ for (( i=1; i<=MAX_ITERATIONS; i++ )); do
   status_echo "───────────────────────────────────────────────────────────────"
 
   echo "$i" > "$RALPH_DIR/iteration.txt"
+  CURRENT_ITERATION=$i
 
   # ── WORK PHASE ──
   WORK_START=$(date +%s)
@@ -1489,6 +1611,19 @@ for (( i=1; i<=MAX_ITERATIONS; i++ )); do
   status_echo "⏳ Working..."
   FEEDBACK=$(cat "$RALPH_DIR/review-feedback.txt" 2>/dev/null || echo "none")
 
+  # Build L4 trace history block for worker context
+  TRACE_HISTORY_BLOCK=""
+  TRACE_HISTORY_N="${BDRALPH_TRACE_HISTORY:-3}"
+  TRACES_DIR="$RALPH_DIR/traces"
+  if [ -d "$TRACES_DIR" ]; then
+    L4_TRACE_FILES=$(ls "$TRACES_DIR"/l4-iteration-*.json 2>/dev/null | sort -t- -k3 -n | tail -n "$TRACE_HISTORY_N")
+    if [ -n "$L4_TRACE_FILES" ]; then
+      TRACE_HISTORY_BLOCK="
+L4 TRACE HISTORY (last ${TRACE_HISTORY_N} governance reviews — read to avoid repeating patterns):
+$(for f in $L4_TRACE_FILES; do echo "--- $(basename "$f") ---"; cat "$f"; echo; done)"
+    fi
+  fi
+
   WORK_PROMPT="You are in a RALPH LOOP — iteration $i of $MAX_ITERATIONS.
 Your memory lives in files only. Context resets each iteration.
 
@@ -1496,6 +1631,7 @@ STATE FILES in artifacts/bdralph/:
 - task.md         → your task (READ FIRST)
 - iteration.txt   → current iteration number
 - review-feedback.txt → feedback from last review (address first)
+${TRACE_HISTORY_BLOCK}
 
 YOUR JOBS:
 1. cat artifacts/bdralph/task.md
@@ -1587,10 +1723,22 @@ REVISE: [one paragraph of specific actionable feedback]"
       fi
       if echo "$REVIEW_OUTPUT" | head -1 | grep -q "^SHIP"; then
         ui_set_agent_state l4 done "SHIP" 0
+        ui_write_value l4_tokens ""
+        write_trace "l4" "$i" "SHIP" \
+          "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+          "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+          "openai-standard" "L4 governance review passed" \
+          '"triggered_by": ["l1_escalation"], "consecutive_revises_at_trigger": 0, "l1_escalated": true'
       else
         ui_set_agent_state l4 done "REVISE" 0
+        ui_write_value l4_tokens ""
+        _l4s_feedback=$(echo "$REVIEW_OUTPUT" | sed 's/^REVISE:[[:space:]]*//')
+        write_trace "l4" "$i" "REVISE" \
+          "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
+          "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
+          "openai-standard" "$_l4s_feedback" \
+          '"triggered_by": ["l1_escalation"], "consecutive_revises_at_trigger": 0, "l1_escalated": true'
       fi
-      ui_write_value l4_tokens ""
       status_echo "  L4 result: $(echo "$REVIEW_OUTPUT" | head -1)"
     else
       ui_set_agent_state l2 skip "" 0

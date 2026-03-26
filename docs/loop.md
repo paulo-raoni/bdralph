@@ -63,6 +63,7 @@ Any change to this array must be reflected in this file.
 | `BDRALPH_NO_UI` | operator / CI | — | Set to `1` to disable the Ink panel. Worker stdout goes directly to terminal. |
 | `BDRALPH_INK_UI` | `bin/bdralph` | — | Set to `1` to enable the Ink terminal renderer. Requires interactive TTY (`/dev/tty` readable and writable). Do not set manually — `bin/bdralph` handles this. |
 | `BDRALPH_BUDGET` | `bin/bdralph` | `"0.50"` | Session budget in USD. Exported so the Ink panel can display budget remaining. |
+| `BDRALPH_TRACE_HISTORY` | operator | `3` | Number of L4 traces injected into the worker prompt per iteration. |
 
 ### Provider chain
 
@@ -171,5 +172,43 @@ On loop exit (SHIP, BLOCKED, or signal), the loop sends SIGTERM to the process g
 | L3 | standard LLM | medium | Quality review — deeper analysis of correctness, edge cases, test coverage. |
 | L4 | opus-level LLM | high | Governance review — triggered by L1 escalation or repeated L3 revisions. Final authority on sensitive changes. |
 
-<!-- TODO: M3 — document per-layer trace file schema (traces/lN-iteration-N.json) -->
+### Trace files (`artifacts/bdralph/traces/`)
+
+Written by each layer after execution. Cleaned up at session start.
+
+Naming: `lN-iteration-N.json` — e.g. `l1-iteration-3.json`, `l4-iteration-10.json`.
+
+**Common fields (all layers):**
+
+| Field | Type | Description |
+|---|---|---|
+| `session_id` | string | Session identifier (`"20240325T104512-1234"`) |
+| `iteration` | integer | Iteration number |
+| `layer` | string | `"l1"`, `"l2"`, `"l3"`, `"l4"` |
+| `timestamp_start` | string | ISO 8601 UTC |
+| `timestamp_end` | string | ISO 8601 UTC |
+| `duration_ms` | integer | Duration in milliseconds (0 in current implementation) |
+| `result` | string | `"PASS"` \| `"REVISE"` \| `"SHIP"` \| `"BLOCKED"` |
+| `cost_usd` | float | Accumulated reviewer cost at time of write (0 for L1) |
+| `tokens` | object | `{ input: N, output: N }` (zero for L1) |
+| `provider` | string\|null | Provider used (null for L1) |
+| `feedback` | string | Layer feedback or result summary |
+
+**L1 additional fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `sensitive_paths_matched` | array | Matched sensitive paths (empty if none) |
+| `files_checked` | integer | Number of files in verified list |
+| `escalated_to_l4` | boolean | Whether L1 triggered direct L4 escalation |
+
+**L4 additional fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `triggered_by` | array | `["l1_escalation"]`, `["consecutive_revises"]`, or both |
+| `consecutive_revises_at_trigger` | integer | Counter value when L4 was called |
+| `l1_escalated` | boolean | Whether this L4 call was from L1 escalation |
+
+**Worker trace history:** controlled by `BDRALPH_TRACE_HISTORY` env var (default: 3). The worker reads the last N `l4-iteration-*.json` files before each iteration.
 <!-- TODO: M4 — document iteration-log.json schema -->

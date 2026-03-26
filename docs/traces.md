@@ -22,5 +22,10 @@ No trace files yet. The loop writes `work-summary.txt` and `work-complete.txt` t
 - **Lifecycle:** written once when the loop exits (either SHIPPED or BLOCKED), not appended
 - **Contents:** final status (SHIPPED or BLOCKED), total iterations, total cost, timestamp
 
-<!-- TODO: M3 — L1–L4 per-layer trace files (traces/lN-iteration-N.json) -->
 <!-- TODO: M4 — iteration-log.json fields and schema -->
+
+## Per-layer trace files
+
+Each layer writes a trace file after execution. See `docs/loop.md` for the full schema and field descriptions.
+
+Location: `artifacts/bdralph/traces/lN-iteration-N.json`
