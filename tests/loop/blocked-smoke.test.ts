@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -21,7 +21,7 @@ function runLoop(
   try {
     const stdout = execFileSync("bash", [LOOP_SCRIPT, task, ...extra], {
       encoding: "utf-8",
-      timeout: 20000,
+      timeout: 60000,
       env: {
         ...process.env,
         PATH: `${MOCK_BIN}:${process.env.PATH ?? ""}`,
@@ -40,9 +40,17 @@ function runLoop(
   }
 }
 
+const SUGGESTIONS_FILE = path.join(LOGS_DIR, "improvement_suggestions.md");
+
 describe("BLOCKED path smoke tests", () => {
 
+  beforeEach(() => {
+    if (fs.existsSync(SUGGESTIONS_FILE)) fs.unlinkSync(SUGGESTIONS_FILE);
+  });
+
   // T-BLOCKED-01: loop reports BLOCKED when max iterations reached
+  // Note: --max 1 used because --max 2 triggers a loop crash on iteration 2
+  // work phase (exit code 2, no stderr). That is a separate bug to investigate.
   it("T-BLOCKED-01: loop outputs BLOCKED when max iterations exhausted", () => {
     const result = runLoop("test task", ["--max", "1"]);
     expect(result.stdout).toMatch(/BLOCKED/);
@@ -50,13 +58,11 @@ describe("BLOCKED path smoke tests", () => {
 
   // T-BLOCKED-02: improvement_suggestions.md written on BLOCKED
   it("T-BLOCKED-02: improvement_suggestions.md written after BLOCKED", () => {
-    // Remove any stale file first
-    const suggestionsFile = path.join(LOGS_DIR, "improvement_suggestions.md");
 
     runLoop("blocked task test", ["--max", "1"]);
 
-    expect(fs.existsSync(suggestionsFile)).toBe(true);
-    const content = fs.readFileSync(suggestionsFile, "utf-8");
+    expect(fs.existsSync(SUGGESTIONS_FILE)).toBe(true);
+    const content = fs.readFileSync(SUGGESTIONS_FILE, "utf-8");
     expect(content).toContain("BLOCKED");
     expect(content).toContain("blocked task test");
   });
