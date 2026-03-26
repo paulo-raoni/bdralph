@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { render, Box, Text, type Instance } from "ink";
 import { createWriteStream, openSync } from "node:fs";
-import { readStateFile, readWorkerLines, formatCost } from "./ralph-ink-helpers.js";
+import { readStateFile, readWorkerLines, formatCost, readFileContent, computeWorkerLinesCount } from "./ralph-ink-helpers.js";
 
 // ---------------------------------------------------------------------------
 // Panel component
@@ -15,10 +15,10 @@ interface PanelState {
   totalCost: string;
   workerState: string;
   workerLines: string[];
+  smResponse: string;
+  alerts: string;
 }
 
-// TODO: M6 — replace fixed N=10 with dynamic height based on terminal rows
-const WORKER_LINES_COUNT = 10;
 const POLL_INTERVAL_MS = 150;
 const WORKER_POLL_INTERVAL_MS = 200;
 
@@ -40,9 +40,11 @@ function useElapsed(): string {
 function Panel({
   prefix,
   budget,
+  ralphDir,
 }: {
   prefix: string;
   budget: string;
+  ralphDir: string;
 }) {
   const [state, setState] = useState<PanelState>({
     task: "",
@@ -52,6 +54,8 @@ function Panel({
     totalCost: "0.00",
     workerState: "waiting",
     workerLines: [],
+    smResponse: "",
+    alerts: "",
   });
 
   const elapsed = useElapsed();
@@ -67,49 +71,93 @@ function Panel({
         workerMode: readStateFile(prefix, "worker_mode", prev.workerMode),
         totalCost: readStateFile(prefix, "total_cost", prev.totalCost),
         workerState: readStateFile(prefix, "worker_state", prev.workerState),
+        smResponse: readFileContent(`${ralphDir}/second-mind-response.txt`),
+        alerts: readFileContent(`${ralphDir}/alerts.txt`),
       }));
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(stateTimer);
-  }, [prefix]);
+  }, [prefix, ralphDir]);
 
   useEffect(() => {
     const workerTimer = setInterval(() => {
       setState((prev) => ({
         ...prev,
-        workerLines: readWorkerLines(workerOutputFile, WORKER_LINES_COUNT),
+        workerLines: readWorkerLines(workerOutputFile, 25),
       }));
     }, WORKER_POLL_INTERVAL_MS);
-
     return () => clearInterval(workerTimer);
   }, [workerOutputFile]);
 
   const cols = Math.max(
-    (process.stdout as NodeJS.WriteStream).columns
-      || parseInt(process.env.COLUMNS || "80", 10),
-    60,
+    (process.stdout as NodeJS.WriteStream).columns ||
+      parseInt(process.env.COLUMNS || "80", 10),
+    40,
   );
-  const innerWidth = cols - 4; // box borders + padding
+  const rows = Math.max(
+    (process.stdout as NodeJS.WriteStream).rows ||
+      parseInt(process.env.LINES || "24", 10),
+    10,
+  );
 
-  const headerText = `bdralph  •  Iter ${state.iteration} / ${state.maxIterations}  •  ${state.workerMode}  •  ${elapsed}`;
-  const costText = formatCost(state.totalCost, budget);
+  const minimalist = rows < 15;
+  const narrow = cols < 80;
+
+  const hasSecondMind = state.smResponse.length > 0;
+  const hasAlerts = state.alerts.length > 0;
+  const workerLinesCount = computeWorkerLinesCount(rows, hasSecondMind, hasAlerts);
+  const innerWidth = cols - 4;
+
+  // In narrow mode, truncate content more aggressively
+  const contentWidth = narrow ? cols - 2 : innerWidth;
+
+  if (minimalist) {
+    // <15 rows: single header line only
+    return (
+      <Box flexDirection="column" width={cols}>
+        <Text bold>{`bdralph  •  ${state.iteration}/${state.maxIterations}  •  ${elapsed}`}</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" width={cols}>
+      {/* Header */}
       <Box borderStyle="double" flexDirection="column" paddingX={1}>
-        <Text bold>{headerText}</Text>
+        <Text bold>
+          {`bdralph  •  Iter ${state.iteration} / ${state.maxIterations}  •  ${state.workerMode}  •  ${elapsed}`}
+        </Text>
+        <Text dimColor>{`Task: ${state.task.slice(0, contentWidth - 6)}`}</Text>
+        <Text>{formatCost(state.totalCost, budget)}</Text>
       </Box>
+
+      {/* Alerts section — shown only when content present */}
+      {hasAlerts && (
+        <Box borderStyle="single" flexDirection="column" paddingX={1}>
+          <Text bold color="yellow">⚠ Alerts</Text>
+          <Text>{state.alerts.slice(0, contentWidth)}</Text>
+        </Box>
+      )}
+
+      {/* Second Mind section — shown only when response present */}
+      {hasSecondMind && (
+        <Box borderStyle="single" flexDirection="column" paddingX={1}>
+          <Text bold color="cyan">🧠 Second Mind</Text>
+          {state.smResponse
+            .split("\n")
+            .slice(0, 3)
+            .map((line, i) => (
+              <Text key={i}>{line.slice(0, contentWidth)}</Text>
+            ))}
+        </Box>
+      )}
+
+      {/* Loop / worker output section */}
       <Box borderStyle="single" flexDirection="column" paddingX={1}>
-        <Text>Task: {state.task.slice(0, innerWidth - 6)}</Text>
-      </Box>
-      <Box borderStyle="single" flexDirection="column" paddingX={1}>
-        <Text>{costText}</Text>
-      </Box>
-      <Box borderStyle="single" flexDirection="column" paddingX={1}>
-        <Text dimColor>Worker output (last {WORKER_LINES_COUNT} lines):</Text>
+        <Text dimColor>{`Worker output (last ${workerLinesCount} lines):`}</Text>
         {state.workerLines.length > 0 ? (
-          state.workerLines.map((line, i) => (
-            <Text key={i}>{"> " + line.slice(0, innerWidth - 2)}</Text>
+          state.workerLines.slice(-workerLinesCount).map((line, i) => (
+            <Text key={i}>{"> " + line.slice(0, contentWidth - 2)}</Text>
           ))
         ) : (
           <Text dimColor>{"  (waiting for output...)"}</Text>
@@ -123,11 +171,11 @@ function Panel({
 // Main entry — called from ralph-ink.ts
 // ---------------------------------------------------------------------------
 
-export function startPanel(prefix: string, budget: string): Instance {
+export function startPanel(prefix: string, budget: string, ralphDir: string): Instance {
   const ttyFd = openSync("/dev/tty", "w");
   const ttyStream = createWriteStream("/dev/tty", { fd: ttyFd });
 
-  return render(<Panel prefix={prefix} budget={budget} />, {
+  return render(<Panel prefix={prefix} budget={budget} ralphDir={ralphDir} />, {
     stdout: ttyStream as unknown as NodeJS.WriteStream,
     patchConsole: false,
     exitOnCtrlC: false,
