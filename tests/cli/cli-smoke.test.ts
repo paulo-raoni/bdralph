@@ -176,10 +176,19 @@ describe("CLI smoke tests", () => {
     expect(result.stdout).toContain("install");
   });
 
-  // T-12: Budget zero → exit 1, budget warning
-  it("T-12: BDRALPH_BUDGET=0 exits with budget warning", () => {
+  // T-12a: Budget zero via env var → exit 1, budget warning
+  it("T-12a: BDRALPH_BUDGET=0 exits with budget warning", () => {
     const result = runWithClaude(["test task"], {
       BDRALPH_BUDGET: "0",
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toMatch(/budget/i);
+  });
+
+  // T-12b: Budget zero via --budget flag → exit 1, budget warning
+  it("T-12b: --budget 0 exits with budget warning", () => {
+    const result = runWithClaude(["test task", "--budget", "0"], {
       BDRALPH_LOOP_MOCK: "1",
     });
     expect(result.exitCode).toBe(1);

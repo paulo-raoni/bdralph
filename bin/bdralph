@@ -194,6 +194,12 @@ if [[ "${BDRALPH_BUDGET:-}" == "0" ]]; then
   exit 1
 fi
 
+# Budget zero check (via --budget flag)
+if [[ "$BUDGET" == "0" || "$BUDGET" == "0.00" ]]; then
+  echo "Error: --budget cannot be zero. Set a budget greater than \$0." >&2
+  exit 1
+fi
+
 # --- Mock mode (testing only) ---
 if [[ "${BDRALPH_LOOP_MOCK:-}" == "1" ]]; then
   mock_result="${BDRALPH_MOCK_RESULT:-SHIP}"
