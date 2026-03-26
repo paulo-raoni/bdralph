@@ -37,3 +37,6 @@ fixtures/e2e/e2e-*/
 
 # Factory reference zip (temporary, remove after extraction)
 agentic-factory-core-full.zip
+
+# Runtime config (created/deleted by tests)
+.bdralph.config.json

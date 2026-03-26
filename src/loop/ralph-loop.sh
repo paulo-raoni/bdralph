@@ -135,6 +135,29 @@ rm -f "$RALPH_DIR/.bdralph-complete"
 rm -rf "$RALPH_DIR/traces"
 rm -f "$RALPH_DIR/iteration-log.json"
 
+# --- Read .bdralph.config.json (M5) ---
+SOF_ENABLED=false
+SOF_TRIGGERS=()
+_config_file="$REPO_ROOT/.bdralph.config.json"
+if [ -f "$_config_file" ]; then
+  _sof_enabled=$(node -e "
+    try {
+      const c = JSON.parse(require('fs').readFileSync('$_config_file', 'utf8'));
+      process.stdout.write(String(c.ship_on_failure?.enabled === true));
+    } catch(e) { process.stdout.write('false'); }
+  " 2>/dev/null || echo "false")
+  if [ "$_sof_enabled" = "true" ]; then
+    SOF_ENABLED=true
+    mapfile -t SOF_TRIGGERS < <(node -e "
+      try {
+        const c = JSON.parse(require('fs').readFileSync('$_config_file', 'utf8'));
+        const t = c.ship_on_failure?.triggers;
+        if (Array.isArray(t)) t.forEach(x => console.log(x));
+      } catch(e) {}
+    " 2>/dev/null || true)
+  fi
+fi
+
 # --- UI auto-detect ---
 UI_ENABLED=true
 if [ "${BDRALPH_NO_UI:-}" = "1" ]; then UI_ENABLED=false
@@ -144,6 +167,7 @@ fi
 
 UI_STATE_PREFIX="/tmp/ralph_ui_${SESSION_ID}"
 UI_WORKER_OUTPUT_FILE="${UI_STATE_PREFIX}_worker_output.txt"
+WORKER_STDOUT_FILE="${UI_STATE_PREFIX}_worker_stdout.txt"
 UI_RENDER_LOCK_DIR="${UI_STATE_PREFIX}_render.lock"
 UI_SESSION_START_EPOCH=$(date +%s)
 UI_SPINNER_PID=""
@@ -1300,6 +1324,26 @@ $l4_feedback"
   # --- L2: Protocol Check (provider chain) ---
   ui_set_agent_state l2 active "" 0
   status_echo "  📋 L2 — Protocol check (${L2_PROVIDER_CHAIN[0]})"
+
+  # --- L2 enriched context (M5) ---
+  local l2_git_diff=""
+  l2_git_diff=$(git -C "$REPO_ROOT" diff HEAD 2>/dev/null | tail -200 || true)
+  [ -z "$l2_git_diff" ] && l2_git_diff="No file changes detected in working tree."
+
+  local l2_l1_trace=""
+  local _l1_trace_file="$RALPH_DIR/traces/l1-iteration-${iteration}.json"
+  if [ -f "$_l1_trace_file" ]; then
+    l2_l1_trace=$(cat "$_l1_trace_file" 2>/dev/null || true)
+  fi
+  [ -z "$l2_l1_trace" ] && l2_l1_trace="[L1 trace not available]"
+
+  local l2_worker_tail=""
+  local _trace_n="${BDRALPH_TRACE_HISTORY:-3}"
+  if [ -f "$WORKER_STDOUT_FILE" ]; then
+    l2_worker_tail=$(tail -n "$_trace_n" "$WORKER_STDOUT_FILE" 2>/dev/null || true)
+  fi
+  [ -z "$l2_worker_tail" ] && l2_worker_tail="[Worker stdout not captured]"
+
   local l2_prompt="You are a protocol check reviewer. Check ONLY these criteria:
 1. The worker summary mentions running CI gates, OR the task does not require code changes
 2. The files in the verified list below are consistent with the task scope (no obviously forbidden files modified)
@@ -1315,15 +1359,47 @@ $complete_claim
 
 $L1_CONTEXT_BLOCK
 
-Respond with EXACTLY one of:
+=== ADDITIONAL CONTEXT FOR CLASSIFICATION ===
+--- GIT DIFF (last 200 lines) ---
+$l2_git_diff
+
+--- L1 TRACE ---
+$l2_l1_trace
+
+--- WORKER STDOUT TAIL ---
+$l2_worker_tail
+=== END ADDITIONAL CONTEXT ===
+
+After your PASS/FAIL decision, on a SEPARATE line, output the worker outcome
+classification using EXACTLY this format:
+CLASSIFICATION: <value>
+
+Where <value> is one of:
+- pass — worker completed the task successfully
+- failure — worker failed due to a real error (bug, broken tests, logic error)
+- safety_impediment — worker stopped due to a legitimate constraint (sensitive
+  path blocked by L1, worker recognized it cannot proceed without violating a rule)
+
+Respond with EXACTLY:
 PASS
+CLASSIFICATION: <value>
 or
-FAIL: [one sentence explaining what protocol check failed]"
+FAIL: [one sentence explaining what protocol check failed]
+CLASSIFICATION: <value>"
 
   if call_layer_provider "L2" L2_PROVIDER_CHAIN "$l2_prompt"; then
     PIPELINE_LAYERS="L1+L2"
     local l2_result="$REVIEW_OUTPUT"
     status_echo "  L2 result: $(echo "$l2_result" | head -1)"
+
+    # Extract worker_outcome_classification (M5-01)
+    local l2_classification
+    l2_classification=$(echo "$l2_result" | { grep "^CLASSIFICATION:" || true; } | head -1 \
+      | sed 's/^CLASSIFICATION:[[:space:]]*//' | tr -d '[:space:]')
+    case "$l2_classification" in
+      pass|failure|safety_impediment) ;;
+      *) l2_classification="pass" ;;
+    esac
 
     if echo "$l2_result" | head -1 | grep -q "^FAIL"; then
       local l2_feedback
@@ -1342,8 +1418,44 @@ $l2_feedback"
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
         "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
         "${LAYER_ACTIVE_PROVIDER:-${L2_PROVIDER_CHAIN[0]}}" \
-        "$l2_feedback"
+        "$l2_feedback" \
+        "\"worker_outcome_classification\": \"$l2_classification\""
       REVIEW_OUTPUT="REVISE: $consolidated_feedback"
+
+      # ── SHIP-ON-FAILURE SEMANTIC (M5) ──
+      if [ "$SOF_ENABLED" = "true" ] && [ "$l2_classification" = "failure" ] \
+         && [ "${#SOF_TRIGGERS[@]}" -gt 0 ]; then
+        local _triggers_list=""
+        for _t in "${SOF_TRIGGERS[@]}"; do
+          _triggers_list="$_triggers_list\n- $_t"
+        done
+        local _sof_prompt
+        _sof_prompt="You are evaluating whether SHIP-ON-FAILURE conditions are met.
+
+The worker failed to complete the task, but the operator has configured SHIP-ON-FAILURE
+with these conditions that must ALL be satisfied to ship despite failure:
+$(printf '%b' "$_triggers_list")
+
+Evaluate based on:
+- Git diff: $l2_git_diff
+- Worker output: $l2_worker_tail
+- Worker summary: $work_summary
+
+Respond with EXACTLY one of:
+TRIGGERS_SATISFIED
+TRIGGERS_NOT_SATISFIED: [one sentence explaining which trigger was not met]"
+
+        local _sof_result=""
+        if call_layer_provider "L2" L2_PROVIDER_CHAIN "$_sof_prompt"; then
+          _sof_result="$REVIEW_OUTPUT"
+        fi
+
+        if echo "$_sof_result" | head -1 | grep -q "^TRIGGERS_SATISFIED$"; then
+          status_echo "⚡ SHIP-ON-FAILURE: L2 confirms triggers satisfied. Overriding REVISE → SHIP."
+          REVIEW_OUTPUT="SHIP"
+        fi
+      fi
+
       return 0
     fi
 
@@ -1357,7 +1469,8 @@ $l2_feedback"
       "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
       "$LAST_LLM_INPUT_TOKENS" "$LAST_LLM_OUTPUT_TOKENS" \
       "${LAYER_ACTIVE_PROVIDER:-${L2_PROVIDER_CHAIN[0]}}" \
-      "L2 protocol check passed"
+      "L2 protocol check passed" \
+      "\"worker_outcome_classification\": \"$l2_classification\""
     consolidated_feedback="$consolidated_feedback
 
 [L2 — Protocol Check: PASS]"
@@ -1669,9 +1782,11 @@ SAFETY CONSTRAINTS (mandatory, never violate):
   WORKER_MODEL_FLAG=$(get_worker_model_flag)
   # shellcheck disable=SC2086
   if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
-    echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG > "$UI_WORKER_OUTPUT_FILE" 2>&1
+    echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
+      | tee "$UI_WORKER_OUTPUT_FILE" > "$WORKER_STDOUT_FILE"
   else
-    echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG
+    echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
+      | tee "$WORKER_STDOUT_FILE"
   fi
   WORK_END=$(date +%s)
   ui_set_agent_state worker done "done" "$((WORK_END - WORK_START))"
