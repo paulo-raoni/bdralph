@@ -6,16 +6,23 @@
     "bdralph": "bin/bdralph"
   },
   "scripts": {
-    "test": "cd fixtures/playground && npm test",
-    "test:watch": "cd fixtures/playground && npm run test:watch",
+    "test": "vitest run",
+    "test:playground": "cd fixtures/playground && npm test",
+    "test:watch": "vitest run --watch",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "build": "echo 'No build step — bdralph is a bash entry point'",
     "lint": "shellcheck bin/bdralph src/loop/*.sh || true",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "ink": "^5.2.1",
+    "react": "^18.3.1"
+  },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.28",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
-    "@types/node": "^20.0.0"
+    "vitest": "^1.6.0"
   }
 }

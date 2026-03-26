@@ -200,8 +200,21 @@ if [[ "$BUDGET" == "0" || "$BUDGET" == "0.00" ]]; then
   exit 1
 fi
 
+# --- Ink UI activation ---
+# Enable the Ink panel unless BDRALPH_NO_UI=1 is set
+if [[ "${BDRALPH_NO_UI:-}" != "1" ]]; then
+  export BDRALPH_INK_UI=1
+fi
+
+# Export budget so the Ink panel can read it
+export BDRALPH_BUDGET="$BUDGET"
+
 # --- Mock mode (testing only) ---
 if [[ "${BDRALPH_LOOP_MOCK:-}" == "1" ]]; then
+  if [[ "${BDRALPH_MOCK_DUMP_ENV:-}" == "1" ]]; then
+    echo "ink_ui: ${BDRALPH_INK_UI:-unset}"
+    echo "budget_env: ${BDRALPH_BUDGET:-unset}"
+  fi
   mock_result="${BDRALPH_MOCK_RESULT:-SHIP}"
   echo "bdralph mock mode"
   echo "task: $TASK"

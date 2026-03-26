@@ -194,4 +194,24 @@ describe("CLI smoke tests", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/budget/i);
   });
+
+  // T-13: BDRALPH_NO_UI=1 does not set BDRALPH_INK_UI=1
+  it("T-13: BDRALPH_NO_UI=1 does not activate Ink UI", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_LOOP_MOCK: "1",
+      BDRALPH_MOCK_DUMP_ENV: "1",
+      BDRALPH_NO_UI: "1",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("ink_ui: unset");
+  });
+
+  // T-14: BDRALPH_BUDGET is exported to the loop
+  it("T-14: --budget value is exported as BDRALPH_BUDGET", () => {
+    const result = runWithClaude(["test task", "--budget", "1.25"], {
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("budget: 1.25");
+  });
 });
