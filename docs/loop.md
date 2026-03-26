@@ -98,13 +98,13 @@ Never committed. Persists for the duration of a session.
 | `work-summary.txt` | Appended after each iteration: number, model, outcome, cost |
 | `work-complete.txt` | Written once at loop exit: final status, total iterations, total cost, timestamp |
 | `.bdralph-complete` | Sentinel file written on clean exit |
-| `operator-signal.json` | Operator-to-loop communication. Checked at start of each iteration. Valid formats: `{"action":"stop-now"}`, `{"action":"stop-after-this"}`, `{"action":"stop-on-fail"}`, `{"action":"message","content":"..."}` |
+| `operator-signal.json` | *(planned — not yet implemented)* Operator-to-loop communication. Will be checked at start of each iteration. Valid formats: `{"action":"stop-now"}`, `{"action":"stop-after-this"}`, `{"action":"stop-on-fail"}`, `{"action":"message","content":"..."}` |
 
 ### UI state files (`/tmp/ralph_ui_<SESSION_ID>_*.txt`)
 
 Written by `ralph-loop.sh`, read by the Ink panel. Each file contains a single UTF-8 value. Cleaned up on loop exit.
 
-`SESSION_ID` is generated at loop start as `date +%Y%m%dT%H%M%S-$$` (timestamp + PID). It is the base of `UI_STATE_PREFIX` and also appears in `iteration_report.jsonl` and `work-summary.txt`.
+`SESSION_ID` is generated at loop start as `"$(date +%Y%m%dT%H%M%S)-$$"` (timestamp + shell PID). It is the base of `UI_STATE_PREFIX` and also appears in `iteration_report.jsonl` and `work-summary.txt`.
 
 | Suffix | Content | Example |
 |---|---|---|
@@ -118,12 +118,19 @@ Written by `ralph-loop.sh`, read by the Ink panel. Each file contains a single U
 | `_worker_state.txt` | `waiting\|active\|done` | `"active"` |
 | `_worker_output_preview.txt` | Last ~4 lines of worker output (bash UI) | multiline |
 | `_worker_output.txt` | Full worker stdout (read by Ink panel) | multiline |
+| `_worker_tokens.txt` | Worker token count for current iteration | `"1240"` |
+| `_l1_tokens.txt` | L1 token count | `"0"` |
+| `_l2_tokens.txt` | L2 token count | `"320"` |
+| `_l3_tokens.txt` | L3 token count | `"480"` |
+| `_l4_tokens.txt` | L4 token count (when triggered) | `"0"` |
 | `_banner_kind.txt` | Banner type if active | `"⚠️"` |
 | `_banner_message.txt` | Banner message if active | `"L4 escalation triggered"` |
 | `_{agent}_state.txt` | Agent state (`waiting\|active\|done`) for `worker`, `l1`, `l2`, `l3`, `l4` | `"active"` |
 | `_{agent}_duration.txt` | Agent duration in seconds | `"12"` |
 | `_{agent}_started.txt` | Agent start epoch | `"1711234567"` |
 | `_{agent}_detail.txt` | Agent detail text | `"reviewing..."` |
+
+> Internal-only files not listed above: `_spinner_index.txt`, `_spinner_frame.txt` (bash UI animation state), `_frame.txt` (bash UI rendered frame), `_render.lock` (render lock directory). These are transient and not consumed by the Ink panel.
 
 ### Logs (`logs/`)
 
