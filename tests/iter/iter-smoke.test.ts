@@ -94,6 +94,7 @@ describe("Iteration log smoke tests", () => {
       BDRALPH_LLM_DELEGATE: MOCK_DELEGATE_SEQ,
       MOCK_SEQUENCE_FILE: seqFile,
       BDRALPH_MOCK_WRITE_ITER_LOG: "1",
+      BDRALPH_SM_THRESHOLD: "0",
     });
 
     // After a 2-iteration run, the iteration-log.json written by iter 1's worker should

@@ -83,6 +83,42 @@ Options:
 USAGE
 }
 
+# --- Subcommand dispatch ---
+if [[ "${1:-}" == "stop" ]]; then
+  shift
+  case "${1:-}" in
+    --now)        _stop_mode="stop-now" ;;
+    --after-this) _stop_mode="stop-after-this" ;;
+    --on-fail)    _stop_mode="stop-on-fail" ;;
+    *)
+      echo "Usage: bdralph stop --now | --after-this | --on-fail" >&2
+      exit 1
+      ;;
+  esac
+  _signal_file="${BDRALPH_RALPH_DIR:-$(dirname "$0")/../artifacts/bdralph}/operator-signal.json"
+  mkdir -p "$(dirname "$_signal_file")"
+  printf '{"action": "%s"}\n' "$_stop_mode" > "$_signal_file"
+  echo "Stop signal written: $_stop_mode"
+  exit 0
+fi
+
+if [[ "${1:-}" == "ask" ]]; then
+  shift
+  _question="${1:-}"
+  if [[ -z "$_question" ]]; then
+    echo "Usage: bdralph ask \"<question>\"" >&2
+    exit 1
+  fi
+  _signal_file="${BDRALPH_RALPH_DIR:-$(dirname "$0")/../artifacts/bdralph}/operator-signal.json"
+  mkdir -p "$(dirname "$_signal_file")"
+  node -e "
+    const q = process.argv[1];
+    process.stdout.write(JSON.stringify({action: 'message', content: q}) + '\n');
+  " "$_question" > "$_signal_file"
+  echo "Message written to Second Mind."
+  exit 0
+fi
+
 # --- Argument parsing (flags and task in any order) ---
 if [[ $# -lt 1 ]]; then
   echo "Error: Missing task argument." >&2

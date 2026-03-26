@@ -134,6 +134,8 @@ rm -f "$RALPH_DIR/work-summary.txt"
 rm -f "$RALPH_DIR/.bdralph-complete"
 rm -rf "$RALPH_DIR/traces"
 rm -f "$RALPH_DIR/iteration-log.json"
+rm -f "$RALPH_DIR/second-mind-response.txt"
+rm -f "$RALPH_DIR/operator-signal.json"
 
 # --- Read .bdralph.config.json (M5) ---
 SOF_ENABLED=false
@@ -156,6 +158,12 @@ if [ -f "$_config_file" ]; then
       } catch(e) {}
     " 2>/dev/null || true)
   fi
+fi
+
+# --- Second Mind threshold (M6-02) ---
+SM_THRESHOLD="${BDRALPH_SM_THRESHOLD:-}"
+if [ -z "$SM_THRESHOLD" ]; then
+  SM_THRESHOLD=$(( MAX_ITERATIONS / 2 ))
 fi
 
 # --- UI auto-detect ---
@@ -774,6 +782,11 @@ fi
 # --- Worker model state ---
 CONSECUTIVE_REVISES=0
 WORKER_ESCALATED=false
+STOP_AFTER_THIS=false
+STOP_ON_FAIL=false
+PENDING_SM_MESSAGE=""
+SM_THRESHOLD_FIRED=false
+SM_L4_FIRED=false
 
 get_worker_model_flag() {
   case "$WORKER" in
@@ -1705,6 +1718,84 @@ Rules:
 - Do NOT nitpick style if functionality is correct"
 }
 
+# --- run_second_mind ---
+# Builds session context and calls llm-delegate.
+# Writes response to artifacts/bdralph/second-mind-response.txt.
+# Args: <trigger> <question>
+# trigger: "explicit" | "threshold" | "l4_signal"
+# question: operator question (explicit trigger only; empty for automatic triggers)
+run_second_mind() {
+  local trigger="$1"
+  local question="${2:-}"
+
+  status_echo "🧠 SECOND MIND activated (trigger: $trigger)"
+
+  # Build context: all traces + iteration-log + last N worker output lines
+  local sm_context=""
+  local traces_dir="$RALPH_DIR/traces"
+  if [ -d "$traces_dir" ] && ls "$traces_dir"/*.json >/dev/null 2>&1; then
+    sm_context="$sm_context\n=== SESSION TRACES ===\n"
+    for _tf in "$traces_dir"/*.json; do
+      sm_context="$sm_context\n--- $(basename "$_tf") ---\n$(cat "$_tf" 2>/dev/null || true)\n"
+    done
+  fi
+  if [ -f "$RALPH_DIR/iteration-log.json" ]; then
+    sm_context="$sm_context\n=== ITERATION LOG ===\n$(cat "$RALPH_DIR/iteration-log.json" 2>/dev/null || true)\n"
+  fi
+  local _sm_n="${BDRALPH_TRACE_HISTORY:-3}"
+  if [ -f "$WORKER_STDOUT_FILE" ]; then
+    local _worker_tail=""
+    _worker_tail=$(tail -n "$_sm_n" "$WORKER_STDOUT_FILE" 2>/dev/null || true)
+    if [ -n "$_worker_tail" ]; then
+      sm_context="$sm_context\n=== WORKER OUTPUT (last $_sm_n lines) ===\n$_worker_tail\n"
+    fi
+  fi
+
+  # Build prompt
+  local sm_prompt
+  if [ "$trigger" = "explicit" ] && [ -n "$question" ]; then
+    sm_prompt="You are the Second Mind — a strategic advisor for a governed agentic loop.
+You have access to the complete session context below.
+
+OPERATOR QUESTION: $question
+
+SESSION CONTEXT:
+$(printf '%b' "$sm_context")
+
+Provide a concise, actionable response focused on the operator's question.
+Reference specific traces or iteration data where relevant."
+  else
+    local trigger_reason=""
+    case "$trigger" in
+      threshold) trigger_reason="The loop has reached the iteration threshold without completing the task." ;;
+      l4_signal) trigger_reason="L4 has issued multiple consecutive REVISE decisions." ;;
+    esac
+    sm_prompt="You are the Second Mind — a strategic advisor for a governed agentic loop.
+You have been activated automatically because: $trigger_reason
+
+SESSION CONTEXT:
+$(printf '%b' "$sm_context")
+
+Analyze the session and provide:
+1. What the loop is stuck on (if anything)
+2. A concrete recommendation for the next iteration
+3. Whether the task scope needs to be adjusted
+
+Be concise and actionable."
+  fi
+
+  # Call delegate — use BDRALPH_SM_DELEGATE if set, otherwise LLM_DELEGATE
+  local _sm_delegate="${BDRALPH_SM_DELEGATE:-$LLM_DELEGATE}"
+  local _sm_tmp="/tmp/sm_response_$$.txt"
+  if bash "$_sm_delegate" "openai-standard" "$sm_prompt" > "$_sm_tmp" 2>/dev/null; then
+    cat "$_sm_tmp" > "$RALPH_DIR/second-mind-response.txt"
+  else
+    echo "[Second Mind unavailable — provider error]" > "$RALPH_DIR/second-mind-response.txt"
+  fi
+  status_echo "🧠 Second Mind response written to artifacts/bdralph/second-mind-response.txt"
+  rm -f "$_sm_tmp"
+}
+
 # --- MAIN LOOP ---
 for (( i=1; i<=MAX_ITERATIONS; i++ )); do
   ITER_START_MS=$(date +%s%3N 2>/dev/null || date +%s000)
@@ -1717,6 +1808,66 @@ for (( i=1; i<=MAX_ITERATIONS; i++ )); do
 
   echo "$i" > "$RALPH_DIR/iteration.txt"
   CURRENT_ITERATION=$i
+
+  # ── OPERATOR SIGNAL CHECK ──
+  _signal_file="$RALPH_DIR/operator-signal.json"
+  if [ -f "$_signal_file" ]; then
+    _action=$(node -e "
+      try {
+        const s = JSON.parse(require('fs').readFileSync('$_signal_file', 'utf8'));
+        process.stdout.write(s.action || '');
+      } catch(e) { process.stdout.write(''); }
+    " 2>/dev/null || true)
+    case "$_action" in
+      stop-now)
+        status_echo "🛑 OPERATOR SIGNAL: stop-now — stopping immediately."
+        rm -f "$_signal_file"
+        break
+        ;;
+      stop-after-this)
+        status_echo "🛑 OPERATOR SIGNAL: stop-after-this — will stop after this iteration."
+        STOP_AFTER_THIS=true
+        rm -f "$_signal_file"
+        ;;
+      stop-on-fail)
+        status_echo "🛑 OPERATOR SIGNAL: stop-on-fail — will stop if next iteration fails."
+        STOP_ON_FAIL=true
+        rm -f "$_signal_file"
+        ;;
+      message)
+        _msg_content=$(node -e "
+          try {
+            const s = JSON.parse(require('fs').readFileSync('$_signal_file', 'utf8'));
+            process.stdout.write(s.content || '');
+          } catch(e) { process.stdout.write(''); }
+        " 2>/dev/null || true)
+        PENDING_SM_MESSAGE="$_msg_content"
+        status_echo "💬 OPERATOR SIGNAL: message queued for Second Mind."
+        rm -f "$_signal_file"
+        ;;
+    esac
+  fi
+
+  # ── SECOND MIND TRIGGER CHECKS ──
+
+  # Trigger 1: explicit message from operator
+  if [ -n "$PENDING_SM_MESSAGE" ]; then
+    run_second_mind "explicit" "$PENDING_SM_MESSAGE"
+    PENDING_SM_MESSAGE=""
+  fi
+
+  # Trigger 2: iteration threshold (fire once)
+  if [ "$i" -ge "$SM_THRESHOLD" ] && [ "$SM_THRESHOLD" -gt 0 ] \
+     && [ "$SM_THRESHOLD_FIRED" = "false" ]; then
+    SM_THRESHOLD_FIRED=true
+    run_second_mind "threshold" ""
+  fi
+
+  # Trigger 3: L4 signal (fire once per streak, flagged at end of previous iteration)
+  if [ "$SM_L4_FIRED" = "true" ]; then
+    SM_L4_FIRED=false
+    run_second_mind "l4_signal" ""
+  fi
 
   # ── WORK PHASE ──
   WORK_START=$(date +%s)
@@ -1931,9 +2082,23 @@ REVISE: [one paragraph of specific actionable feedback]"
         ui_write_value worker_mode "$(get_worker_ui_mode)"
         status_echo "⚡ AUTO-ESCALATION: Switching worker to claude-opus-4-6 after $CONSECUTIVE_REVISES consecutive REVISE(s)"
       fi
+      if [ "$CONSECUTIVE_REVISES" -ge "$ESCALATE_AFTER" ] && [ "$SM_L4_FIRED" = "false" ]; then
+        SM_L4_FIRED=true
+      fi
     else
       CONSECUTIVE_REVISES=0
+      SM_L4_FIRED=false
     fi
+  fi
+
+  # ── OPERATOR STOP CHECKS ──
+  if [ "$STOP_AFTER_THIS" = "true" ]; then
+    status_echo "🛑 Stopping after this iteration (operator signal)."
+    break
+  fi
+  if [ "$STOP_ON_FAIL" = "true" ] && [ "$RESULT" = "REVISE" ]; then
+    status_echo "🛑 Stopping on failure (operator signal)."
+    break
   fi
 
   echo "$RESULT" > "$RALPH_DIR/review-result.txt"
