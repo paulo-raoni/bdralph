@@ -135,6 +135,7 @@ rm -f "$RALPH_DIR/.bdralph-complete"
 rm -rf "$RALPH_DIR/traces"
 rm -f "$RALPH_DIR/iteration-log.json"
 rm -f "$RALPH_DIR/second-mind-response.txt"
+rm -f "$RALPH_DIR/operator-signal.json"
 
 # --- Read .bdralph.config.json (M5) ---
 SOF_ENABLED=false
