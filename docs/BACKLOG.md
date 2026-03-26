@@ -74,3 +74,7 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
 - **BDRALPH_LOOP_MOCK=1 production guard** — add a warning banner or NODE_ENV-style
   guard to prevent mock mode from activating silently in production environments.
   Identified during M1b review (Finding 2, severity: low).
+- **devcontainer PATH / bdralph alias** — after `npm install`, `bdralph` is not available
+  directly in the devcontainer PATH (symlink in `node_modules/.bin/` is not created).
+  Current workaround: `bash bin/bdralph`. Resolve before or alongside the publishing
+  milestone — options: alias in `devcontainer.json`, setup script, or PATH fix.

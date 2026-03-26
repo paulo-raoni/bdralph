@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { render, Box, Text, type Instance } from "ink";
+import { createWriteStream, openSync } from "node:fs";
 import { readStateFile, readWorkerLines, formatCost } from "./ralph-ink-helpers.js";
 
 // ---------------------------------------------------------------------------
@@ -83,7 +84,11 @@ function Panel({
     return () => clearInterval(workerTimer);
   }, [workerOutputFile]);
 
-  const cols = Math.max(process.stdout.columns || 80, 60);
+  const cols = Math.max(
+    (process.stdout as NodeJS.WriteStream).columns
+      || parseInt(process.env.COLUMNS || "80", 10),
+    60,
+  );
   const innerWidth = cols - 4; // box borders + padding
 
   const headerText = `bdralph  •  Iter ${state.iteration} / ${state.maxIterations}  •  ${state.workerMode}  •  ${elapsed}`;
@@ -119,5 +124,12 @@ function Panel({
 // ---------------------------------------------------------------------------
 
 export function startPanel(prefix: string, budget: string): Instance {
-  return render(<Panel prefix={prefix} budget={budget} />);
+  const ttyFd = openSync("/dev/tty", "w");
+  const ttyStream = createWriteStream("/dev/tty", { fd: ttyFd });
+
+  return render(<Panel prefix={prefix} budget={budget} />, {
+    stdout: ttyStream as unknown as NodeJS.WriteStream,
+    patchConsole: false,
+    exitOnCtrlC: false,
+  });
 }

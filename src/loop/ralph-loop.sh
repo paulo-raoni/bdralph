@@ -159,7 +159,7 @@ if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TE
   RALPH_INK_ACTIVE=true
   UI_STATE_ENABLED=true
   UI_ENABLED=false
-  npx --prefix "$LOOP_DIR" tsx "$LOOP_DIR/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+  setsid npx --prefix "$LOOP_DIR" tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
   INK_RENDERER_PID=$!
 fi
 
@@ -731,7 +731,7 @@ ui_cleanup() {
   fi
 
   if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "${INK_RENDERER_PID:-}" ]; then
-    kill "$INK_RENDERER_PID" 2>/dev/null || true
+    kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
     wait "$INK_RENDERER_PID" 2>/dev/null || true
   fi
 
@@ -1752,7 +1752,7 @@ fi
 
 # --- ink renderer cleanup ---
 if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "$INK_RENDERER_PID" ]; then
-  kill "$INK_RENDERER_PID" 2>/dev/null || true
+  kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
   wait "$INK_RENDERER_PID" 2>/dev/null || true
 fi
 exit 1

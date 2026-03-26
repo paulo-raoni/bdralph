@@ -7,7 +7,7 @@ import {
   readStateFile,
   readWorkerLines,
   formatCost,
-} from "../../src/loop/ralph-ink-helpers.js";
+} from "../../src/loop/ink/ralph-ink-helpers.js";
 
 let tmpDir: string;
 let prefix: string;

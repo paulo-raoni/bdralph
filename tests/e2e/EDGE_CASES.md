@@ -119,3 +119,16 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 | TYPO-01 | `bdralph hlep` → suggests `bdralph help` | automated (T-04) |
 | TYPO-02 | `bdralp "task"` → suggests `bdralph` | not implemented (shell-level, outside bdralph scope) |
 | TYPO-03 | `bdralph --mxa 10` → suggests `--max` | automated (T-05) |
+
+---
+
+## Ink panel (6)
+
+| ID | Case | Status |
+|---|---|---|
+| PANEL-01 | Ink panel renders without TransformError — BDRALPH_INK_UI=1 + mock mode | automated (PANEL-01) |
+| PANEL-02 | Panel displays correct fields — iteration/max, model, cost | automated (PANEL-02) |
+| PANEL-03 | Process exits after SHIP without manual intervention | automated (PANEL-03) |
+| PANEL-04 | BDRALPH_NO_UI=1 — Ink panel does not render | automated (PANEL-04) |
+| PANEL-05 | Panel frames do not stack — single render frame visible at a time | not implemented |
+| PANEL-06 | Panel cleans up terminal on SIGTERM — cursor restored, screen cleared | not implemented |
