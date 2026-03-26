@@ -71,3 +71,6 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
 - **License** — decide before publishing (blocks npm package name decision: `bdralph` vs `bd-ralph`)
 - **npm package name** — `bdralph` vs `bd-ralph` — decide when publishing milestone is adopted
 - **Mascot** — post-mature project, out of critical path
+- **BDRALPH_LOOP_MOCK=1 production guard** — add a warning banner or NODE_ENV-style
+  guard to prevent mock mode from activating silently in production environments.
+  Identified during M1b review (Finding 2, severity: low).

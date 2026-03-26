@@ -25,3 +25,16 @@ Index of key design decisions. One line per decision. For full detail, see `docs
 | M0-15 | Branch naming convention: feat/mN-description, fix/, chore/, doc/, bootstrap/ | docs/decisions/M0.md |
 | M0-16 | Governance files moved to docs/ — CLAUDE.md and README.md stay at root | docs/decisions/M0.md |
 | M0-17 | Executor invocation contract: --dangerously-skip-permissions for Claude Code, --dangerously-bypass-approvals-and-sandbox for Codex, Always proceed for Antigravity | docs/decisions/M0.md |
+
+## M1b — CLI wrapper + base documentation
+
+| ID | Decision |
+|---|---|
+| M1b-01 | Entry point: bin field |
+| M1b-02 | Typo detection in bash |
+| M1b-03 | Docs: structured placeholders with real content |
+| M1b-04 | Session termination: summary output |
+| M1b-05 | REPL terminal deferred to M6b |
+| M1b-06 | BDRALPH_LOOP_MOCK=1 for testing |
+
+Full detail: `docs/decisions/M1b.md`
