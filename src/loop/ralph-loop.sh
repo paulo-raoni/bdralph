@@ -159,7 +159,7 @@ if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TE
   RALPH_INK_ACTIVE=true
   UI_STATE_ENABLED=true
   UI_ENABLED=false
-  npx --prefix "$LOOP_DIR" tsx "$LOOP_DIR/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+  npx --prefix "$LOOP_DIR" tsx --tsconfig "$LOOP_DIR/tsconfig.ink.json" "$LOOP_DIR/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
   INK_RENDERER_PID=$!
 fi
 
