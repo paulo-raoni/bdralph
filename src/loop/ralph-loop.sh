@@ -1882,7 +1882,7 @@ for (( i=1; i<=MAX_ITERATIONS; i++ )); do
   TRACE_HISTORY_N="${BDRALPH_TRACE_HISTORY:-3}"
   TRACES_DIR="$RALPH_DIR/traces"
   if [ -d "$TRACES_DIR" ]; then
-    L4_TRACE_FILES=$(ls "$TRACES_DIR"/l4-iteration-*.json 2>/dev/null | sort -t- -k3 -n | tail -n "$TRACE_HISTORY_N")
+    L4_TRACE_FILES=$({ ls "$TRACES_DIR"/l4-iteration-*.json 2>/dev/null || true; } | sort -t- -k3 -n | tail -n "$TRACE_HISTORY_N")
     if [ -n "$L4_TRACE_FILES" ]; then
       TRACE_HISTORY_BLOCK="
 L4 TRACE HISTORY (last ${TRACE_HISTORY_N} governance reviews — read to avoid repeating patterns):
@@ -2041,6 +2041,7 @@ REVISE: [one paragraph of specific actionable feedback]"
     RESULT="SHIP"
   else
     FEEDBACK_TEXT=$(echo "$REVIEW_OUTPUT" | sed 's/^REVISE:[[:space:]]*//' | \
+      sed '/^CLASSIFICATION:/d' | \
       tr -d '\000-\031' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
     echo "$FEEDBACK_TEXT" > "$RALPH_DIR/review-feedback.txt"
   fi

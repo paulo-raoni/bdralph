@@ -49,10 +49,8 @@ describe("BLOCKED path smoke tests", () => {
   });
 
   // T-BLOCKED-01: loop reports BLOCKED when max iterations reached
-  // Note: --max 1 used because --max 2 triggers a loop crash on iteration 2
-  // work phase (exit code 2, no stderr). That is a separate bug to investigate.
   it("T-BLOCKED-01: loop outputs BLOCKED when max iterations exhausted", () => {
-    const result = runLoop("test task", ["--max", "1"]);
+    const result = runLoop("test task", ["--max", "2"]);
     expect(result.stdout).toMatch(/BLOCKED/);
   });
 
