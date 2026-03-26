@@ -7,6 +7,8 @@ import {
   readStateFile,
   readWorkerLines,
   formatCost,
+  readFileContent,
+  computeWorkerLinesCount,
 } from "../../src/loop/ink/ralph-ink-helpers.js";
 
 let tmpDir: string;
@@ -74,5 +76,35 @@ describe("Ink panel helpers", () => {
     const result = formatCost("0.08", "0.50");
     expect(result).toContain("$0.08");
     expect(result).toContain("$0.42");
+  });
+
+  // INK-07: readFileContent returns file content when file exists
+  it("INK-07: readFileContent returns content when file exists", () => {
+    const smFile = `${tmpDir}/second-mind-response.txt`;
+    fs.writeFileSync(smFile, "  Second Mind response  ");
+    expect(readFileContent(smFile)).toBe("Second Mind response");
+  });
+
+  // INK-08: readFileContent returns empty string when file absent
+  it("INK-08: readFileContent returns empty string when file absent", () => {
+    expect(readFileContent(`${tmpDir}/nonexistent.txt`)).toBe("");
+  });
+
+  // INK-09: computeWorkerLinesCount reduces lines when Second Mind is active
+  it("INK-09: computeWorkerLinesCount reserves rows for Second Mind", () => {
+    const withoutSM = computeWorkerLinesCount(24, false, false);
+    const withSM = computeWorkerLinesCount(24, true, false);
+    expect(withSM).toBeLessThan(withoutSM);
+  });
+
+  // INK-10: computeWorkerLinesCount returns minimum of 4
+  it("INK-10: computeWorkerLinesCount returns at least 4 lines", () => {
+    // Even with very small terminal and both sections active
+    expect(computeWorkerLinesCount(10, true, true)).toBeGreaterThanOrEqual(4);
+  });
+
+  // INK-11: computeWorkerLinesCount caps at 20
+  it("INK-11: computeWorkerLinesCount caps at 20 lines for large terminals", () => {
+    expect(computeWorkerLinesCount(200, false, false)).toBe(20);
   });
 });

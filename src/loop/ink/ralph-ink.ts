@@ -3,7 +3,7 @@
 //
 // Re-exports helpers for testing, and delegates to ralph-ink-panel.tsx for rendering.
 
-export { readStateFile, readWorkerLines, formatCost } from "./ralph-ink-helpers.js";
+export { readStateFile, readWorkerLines, formatCost, readFileContent, computeWorkerLinesCount } from "./ralph-ink-helpers.js";
 
 async function main() {
   const { startPanel } = await import("./ralph-ink-panel.jsx");
@@ -15,7 +15,8 @@ async function main() {
   }
 
   const budget = process.env.BDRALPH_BUDGET || "0.50";
-  const instance = startPanel(prefix, budget);
+  const ralphDir = process.env.BDRALPH_RALPH_DIR || "";
+  const instance = startPanel(prefix, budget, ralphDir);
 
   const cleanup = () => {
     instance.unmount();
