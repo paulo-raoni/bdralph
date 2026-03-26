@@ -21,12 +21,12 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 
 | ID | Case | Status |
 |---|---|---|
-| LOOP-01 | Completion signal absent after max iterations — BLOCKED status, improvement suggestion written | not implemented |
+| LOOP-01 | Completion signal absent after max iterations — BLOCKED status, improvement suggestion written | automated (T-BLOCKED-01) |
 | LOOP-02 | Completion signal file empty — treated as not complete | not implemented |
 | LOOP-03 | Diff gigantic (>500 files) — L3 escalates to L4 | not implemented |
 | LOOP-04 | Internal infinite loop in worker — max iterations reached, BLOCKED | not implemented |
 | LOOP-05 | Worker destroys test environment — afterAll cleanup still runs | not implemented |
-| LOOP-06 | Max iterations reached without SHIP — improvement suggestion written | not implemented |
+| LOOP-06 | Max iterations reached without SHIP — improvement suggestion written | automated (T-BLOCKED-02) |
 | LOOP-07 | Same approach repeated N times — worker reads L4 history, breaks pattern | not implemented |
 
 ---
@@ -85,7 +85,7 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 
 | ID | Case | Status |
 |---|---|---|
-| SM-01 | `bdralph ask` without Second Mind active — clear error message | not implemented |
+| SM-01 | `bdralph ask` without Second Mind active — clear error message | automated (T-CLI-ASK-01) — documents current behavior: no warning when loop not active |
 | SM-02 | Second Mind timeout — operator notified, loop continues | not implemented |
 | SM-03 | Watchdog detects conflict with Second Mind busy — conflict queued, not dropped | not implemented |
 | SM-04 | Gas Town without feature flag — clear error with `BDRALPH_GAS_TOWN=enabled` instruction | not implemented |
@@ -132,6 +132,17 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 | PANEL-04 | BDRALPH_NO_UI=1 — Ink panel does not render | automated (PANEL-04) |
 | PANEL-05 | Panel frames do not stack — single render frame visible at a time | not implemented |
 | PANEL-06 | Panel cleans up terminal on SIGTERM — cursor restored, screen cleared | not implemented |
+
+---
+
+## Panel responsiveness (4)
+
+| ID | Case | Status |
+|---|---|---|
+| PANEL-R-01 | Wide layout (≥120 cols) renders full header | automated (PANEL-R-01) |
+| PANEL-R-02 | Narrow layout (<80 cols) renders without crash | automated (PANEL-R-02) |
+| PANEL-R-03 | Minimalist mode (<15 rows) renders without crash | automated (PANEL-R-03) |
+| PANEL-R-04 | Medium layout (80–119 cols) renders without crash | automated (PANEL-R-04) |
 
 ---
 
