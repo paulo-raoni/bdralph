@@ -78,3 +78,22 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
   directly in the devcontainer PATH (symlink in `node_modules/.bin/` is not created).
   Current workaround: `bash bin/bdralph`. Resolve before or alongside the publishing
   milestone — options: alias in `devcontainer.json`, setup script, or PATH fix.
+- **Test parallelism** — as the test suite scales (unit + E2E), CI gates
+  will slow down. Two improvements to implement when gates start impacting
+  the development cycle:
+  (1) Parallel gates: run `npm test`, `npm run typecheck`, and `npm run lint`
+  concurrently via bash `&` + `wait` instead of sequentially.
+  (2) Vitest worker partitioning: configure `--pool` and `--poolOptions` to
+  distribute test files across parallel workers. Expose `BDRALPH_TEST_WORKERS`
+  env var so operators can tune concurrency for their environment (default:
+  Vitest's own default of `os.cpus().length - 1`). RAM/CPU overhead is real —
+  each worker spawns a separate Node process. Benchmark before enabling by
+  default.
+  Trigger: implement when unit tests approach ~1000 or E2E suite exceeds
+  acceptable gate duration.
+  Discarded options considered during planning:
+  - Layer pipeline overlap (L1 writes trace while L2 starts reading) —
+    marginal gain; L1 trace write is fast relative to LLM execution time.
+  - Worker implementation parallelism — Claude Code CLI and Codex already
+    parallelize independent tool calls natively; bdralph does not need to
+    manage this.
