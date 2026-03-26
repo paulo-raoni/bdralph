@@ -8,12 +8,12 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 
 | ID | Case | Status |
 |---|---|---|
-| ENV-01 | Claude Code not installed — clear error message with install instructions | not implemented |
+| ENV-01 | Claude Code not installed — clear error message with install instructions | automated (T-11) |
 | ENV-02 | No Claude Code authentication — clear error message | not implemented |
 | ENV-03 | Incompatible Node version — fails fast with version requirement | not implemented |
 | ENV-04 | `.bdralph.config.json` absent — uses defaults, does not crash | not implemented |
 | ENV-05 | Invalid API key — provider error propagated clearly | not implemented |
-| ENV-06 | Budget zeroed before start — fails fast with clear message | not implemented |
+| ENV-06 | Budget zeroed before start — fails fast with clear message | automated (T-12) |
 
 ---
 
@@ -93,10 +93,29 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 
 ---
 
+## CLI entry point (12)
+
+| ID | Case | Status |
+|---|---|---|
+| CLI-01 | `bdralph --help` → exit 0, stdout contains flag names | automated (T-01) |
+| CLI-02 | `bdralph` (no args) → exit 1, stdout contains usage example | automated (T-02) |
+| CLI-03 | `bdralph --max abc "task"` → exit 1, validation error | automated (T-03) |
+| CLI-04 | `bdralph hlep` → exit 1, suggests help or prints usage | automated (T-04) |
+| CLI-05 | `bdralph --mxa 10 "task"` → exit 1, suggests `--max` | automated (T-05) |
+| CLI-06 | `bdralph "task"` (mocked) → exit 0 | automated (T-06) |
+| CLI-07 | flags passed through to loop | automated (T-07) |
+| CLI-08 | `BDRALPH_NO_UI=1 bdralph "task"` (mocked) → exit 0 | automated (T-08) |
+| CLI-09 | SHIP summary printed | automated (T-09) |
+| CLI-10 | BLOCKED summary printed | automated (T-10) |
+| CLI-11 | Claude Code not installed → exit 1, install instruction | automated (T-11) |
+| CLI-12 | Budget zero → exit 1, budget warning | automated (T-12) |
+
+---
+
 ## Typo detection — smoke test
 
 | ID | Case | Status |
 |---|---|---|
-| TYPO-01 | `bdralph hlep` → suggests `bdralph help` | not implemented |
-| TYPO-02 | `bdralp "task"` → suggests `bdralph` | not implemented |
-| TYPO-03 | `bdralph --mxa 10` → suggests `--max` | not implemented |
+| TYPO-01 | `bdralph hlep` → suggests `bdralph help` | automated (T-04) |
+| TYPO-02 | `bdralp "task"` → suggests `bdralph` | not implemented (shell-level, outside bdralph scope) |
+| TYPO-03 | `bdralph --mxa 10` → suggests `--max` | automated (T-05) |
