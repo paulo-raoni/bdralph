@@ -133,6 +133,7 @@ rm -f "$RALPH_DIR/work-complete.txt"
 rm -f "$RALPH_DIR/work-summary.txt"
 rm -f "$RALPH_DIR/.bdralph-complete"
 rm -rf "$RALPH_DIR/traces"
+rm -f "$RALPH_DIR/iteration-log.json"
 
 # --- UI auto-detect ---
 UI_ENABLED=true
@@ -1628,19 +1629,31 @@ $(for f in $L4_TRACE_FILES; do echo "--- $(basename "$f") ---"; cat "$f"; echo; 
 Your memory lives in files only. Context resets each iteration.
 
 STATE FILES in artifacts/bdralph/:
-- task.md         → your task (READ FIRST)
-- iteration.txt   → current iteration number
-- review-feedback.txt → feedback from last review (address first)
+- task.md              → your task (READ FIRST)
+- iteration.txt        → current iteration number
+- review-feedback.txt  → feedback from last review (address first)
+- iteration-log.json   → your previous iteration strategy (read if exists)
 ${TRACE_HISTORY_BLOCK}
 
 YOUR JOBS:
 1. cat artifacts/bdralph/task.md
 2. cat artifacts/bdralph/review-feedback.txt 2>/dev/null || true
-3. If feedback exists, address it specifically
-4. Do the work following CLAUDE.md rules
-5. Run CI gates if you changed code: npm test && npm run lint && npm run typecheck
-6. Write summary: echo 'what you did' > artifacts/bdralph/work-summary.txt
-7. If task fully complete: echo 'done' > artifacts/bdralph/work-complete.txt
+3. cat artifacts/bdralph/iteration-log.json 2>/dev/null || true
+4. If feedback exists, address it specifically. If iteration log exists, use it to avoid repeating the same approach.
+5. Do the work following CLAUDE.md rules
+6. Run CI gates if you changed code: npm test && npm run lint && npm run typecheck
+7. Write summary: echo 'what you did' > artifacts/bdralph/work-summary.txt
+8. Write iteration log BEFORE writing work-complete.txt:
+   cat > artifacts/bdralph/iteration-log.json << 'ITEREOF'
+   {
+     \"session_id\": \"<SESSION_ID>\",
+     \"iteration\": <N>,
+     \"strategy\": \"<what approach you chose for this iteration>\",
+     \"decision_rationale\": \"<why you chose this approach>\",
+     \"next_action\": \"<what you intend to do next if not complete>\"
+   }
+   ITEREOF
+9. If task fully complete: echo 'done' > artifacts/bdralph/work-complete.txt
 
 Current feedback: ${FEEDBACK}
 

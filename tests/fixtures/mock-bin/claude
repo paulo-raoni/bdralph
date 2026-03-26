@@ -2,4 +2,17 @@
 if [ "${BDRALPH_MOCK_DUMP_PROMPT:-}" = "1" ]; then
   cat
 fi
+if [ "${BDRALPH_MOCK_WRITE_ITER_LOG:-}" = "1" ]; then
+  ITER_LOG_PATH="${RALPH_DIR:-artifacts/bdralph}/iteration-log.json"
+  mkdir -p "$(dirname "$ITER_LOG_PATH")"
+  cat > "$ITER_LOG_PATH" << 'EOF'
+{
+  "session_id": "mock-session",
+  "iteration": 1,
+  "strategy": "mock strategy from previous iteration",
+  "decision_rationale": "mock rationale",
+  "next_action": "mock next action"
+}
+EOF
+fi
 exit 0

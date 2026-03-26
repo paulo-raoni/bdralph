@@ -97,6 +97,7 @@ Never committed. Persists for the duration of a session.
 | `review-result.txt` | Last review result (`SHIP` / `REVISE` / `BLOCKED`) |
 | `review-feedback.txt` | Last review feedback text |
 | `work-summary.txt` | Appended after each iteration: number, model, outcome, cost |
+| `iteration-log.json` | Written by the worker after each iteration. Contains `session_id`, `iteration`, `strategy`, `decision_rationale`, `next_action`. Read by the worker at the start of the next iteration. Deleted at session start. |
 | `work-complete.txt` | Written once at loop exit: final status, total iterations, total cost, timestamp |
 | `.bdralph-complete` | Sentinel file written on clean exit |
 | `operator-signal.json` | *(planned — not yet implemented)* Operator-to-loop communication. Will be checked at start of each iteration. Valid formats: `{"action":"stop-now"}`, `{"action":"stop-after-this"}`, `{"action":"stop-on-fail"}`, `{"action":"message","content":"..."}` |
@@ -211,4 +212,23 @@ Naming: `lN-iteration-N.json` — e.g. `l1-iteration-3.json`, `l4-iteration-10.j
 | `l1_escalated` | boolean | Whether this L4 call was from L1 escalation |
 
 **Worker trace history:** controlled by `BDRALPH_TRACE_HISTORY` env var (default: 3). The worker reads the last N `l4-iteration-*.json` files before each iteration.
-<!-- TODO: M4 — document iteration-log.json schema -->
+### Iteration log (`artifacts/bdralph/iteration-log.json`)
+
+Written by the worker after each iteration, before the review pipeline runs.
+Read by the worker at the start of the next iteration.
+Deleted at session start (M4-03).
+
+The loop passes the file path to the worker and does not interpret its contents.
+
+**Schema:**
+
+| Field | Type | Description |
+|---|---|---|
+| `session_id` | string | Session identifier |
+| `iteration` | integer | Iteration number when this log was written |
+| `strategy` | string | What approach the worker chose for this iteration |
+| `decision_rationale` | string | Why this approach was chosen |
+| `next_action` | string | What the worker intends to do next if not complete |
+
+**Discarded fields:** `quality_score` (no real consumer — L2/L3/L4 evaluate independently),
+`alternatives_considered` (high overhead, low signal — see M0-03).
