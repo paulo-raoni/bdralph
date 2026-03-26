@@ -14,6 +14,7 @@
 | M1b — CLI wrapper + base documentation | #7 | ✅ `bdralph "task"` executes end-to-end. CLI smoke tests pass. docs/architecture.md and docs/traces.md created. |
 | M2 — Streaming + basic Ink panel | #9, #10 | ✅ Ink panel renders via BDRALPH_INK_UI=1. Worker output streamed via log file. Panel displays iter/max, model, cost, budget, last 10 worker lines. Process group cleanup via setsid + kill -- -PID. 25 tests passing (INK-01..06, T-13..14, PANEL-01..04). |
 | M3 — Per-layer traces | #16 | ✅ L1–L4 write traces/lN-iteration-N.json. traces/ cleaned at session start. Worker reads last N L4 traces via BDRALPH_TRACE_HISTORY (default 3). T-TRACE-01..09, T-TRACE-11 pass. |
+| M4 — Iteration log | #17 | ✅ Worker writes/reads iteration-log.json each iteration. Cleaned at session start. Loop passes path, does not interpret contents. T-ITER-01..05 pass. |
 
 ## Notes
 
