@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { render, Box, Text, type Instance } from "ink";
+import { createWriteStream, openSync } from "node:fs";
 import { readStateFile, readWorkerLines, formatCost } from "./ralph-ink-helpers.js";
 
 // ---------------------------------------------------------------------------
@@ -119,5 +120,12 @@ function Panel({
 // ---------------------------------------------------------------------------
 
 export function startPanel(prefix: string, budget: string): Instance {
-  return render(<Panel prefix={prefix} budget={budget} />);
+  const ttyFd = openSync("/dev/tty", "w");
+  const ttyStream = createWriteStream("/dev/tty", { fd: ttyFd });
+
+  return render(<Panel prefix={prefix} budget={budget} />, {
+    stdout: ttyStream as unknown as NodeJS.WriteStream,
+    patchConsole: false,
+    exitOnCtrlC: false,
+  });
 }
