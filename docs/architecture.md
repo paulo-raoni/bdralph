@@ -70,6 +70,47 @@ Refer to [docs/loop.md](loop.md) for cost guard details.
 | L3 | standard LLM (openai-standard / gemini) | medium | Quality review — deeper analysis of correctness, edge cases, and test coverage. |
 | L4 | opus-level LLM | high | Governance review — triggered by L1 escalation or repeated L3 revisions. Final authority on sensitive changes. |
 
-<!-- TODO: M2 — add streaming and Ink panel section -->
+## Streaming + Ink panel (M2)
+
+When `BDRALPH_INK_UI=1` is set (the default from `bin/bdralph`), `ralph-loop.sh` spawns an
+Ink-based terminal panel (`src/loop/ralph-ink.ts` → `ralph-ink-panel.tsx`) as a background
+process. The panel provides real-time loop visibility without interfering with the worker.
+
+### State file protocol
+
+The loop writes state to files named `${UI_STATE_PREFIX}_<key>.txt`, each containing a
+single UTF-8 value. The Ink panel polls these files on a 150ms interval:
+
+| File suffix | Content | Example |
+|---|---|---|
+| `_task.txt` | Task string | `"Add validation to TaskService"` |
+| `_iteration.txt` | Current iteration number | `"3"` |
+| `_max_iterations.txt` | Max iterations | `"10"` |
+| `_worker_mode.txt` | Worker model label | `"sonnet"` |
+| `_total_cost.txt` | Accumulated cost USD | `"0.08"` |
+| `_worker_state.txt` | `waiting\|active\|done` | `"active"` |
+
+### Worker output streaming
+
+Worker stdout is written to `${UI_STATE_PREFIX}_worker_output.txt`. The panel reads this
+file on a 200ms interval and displays the last 10 lines. The line count is fixed at 10 in
+M2; dynamic height based on terminal rows is deferred to M6.
+
+### Panel layout
+
+The panel renders iteration/max, worker model, elapsed time, cost/budget, and the worker
+output tail inside Ink `<Box>` and `<Text>` components with border styles.
+
+### BDRALPH_NO_UI=1
+
+When `BDRALPH_NO_UI=1` is set, `bin/bdralph` does **not** export `BDRALPH_INK_UI=1`.
+The loop skips the Ink renderer and worker stdout goes directly to the terminal.
+
+### Process lifecycle
+
+- The loop spawns the Ink process via `npx tsx ralph-ink.ts "$UI_STATE_PREFIX"`
+- The panel polls state files and worker output on intervals
+- On loop completion, the loop sends `SIGTERM` to the Ink process
+- The panel handles `SIGTERM`/`SIGINT` by restoring the cursor and exiting cleanly
 <!-- TODO: M3 — add traces section -->
 <!-- TODO: M6 — add Second Mind section -->
