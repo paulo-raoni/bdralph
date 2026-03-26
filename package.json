@@ -11,7 +11,7 @@
     "test:watch": "vitest run --watch",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "build": "echo 'No build step — bdralph is a bash entry point'",
-    "lint": "shellcheck bin/bdralph src/loop/*.sh || true",
+    "lint": "shellcheck bin/bdralph src/loop/*.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

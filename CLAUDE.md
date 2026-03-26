@@ -137,7 +137,8 @@ npm run typecheck
 
 | PR type | Gates required |
 |---|---|
-| Code changes (any `.ts`, `.sh`, `.js`, `.py`) | `npm test` + `npm run typecheck` |
+| Code changes (`.ts`, `.js`, `.py`) | `npm test` + `npm run typecheck` |
+| Code changes (`.sh`) | `npm test` + `npm run lint` + `npm run typecheck` |
 | Config changes (`.json`, `.gitignore`, `vitest.*.config.ts`) | `npm run typecheck` |
 | Documentation only (`.md` files, `docs/`) | none |
 
