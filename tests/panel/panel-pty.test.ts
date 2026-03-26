@@ -23,10 +23,14 @@ function spawnInPty(
     ptyProcess.onData((data) => {
       output += data;
     });
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       ptyProcess.kill();
       resolve(output);
     }, collectMs);
+    ptyProcess.onExit(() => {
+      clearTimeout(timer);
+      resolve(output);
+    });
   });
 }
 

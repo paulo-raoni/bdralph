@@ -84,7 +84,11 @@ function Panel({
     return () => clearInterval(workerTimer);
   }, [workerOutputFile]);
 
-  const cols = Math.max(process.stdout.columns || 80, 60);
+  const cols = Math.max(
+    (process.stdout as NodeJS.WriteStream).columns
+      || parseInt(process.env.COLUMNS || "80", 10),
+    60,
+  );
   const innerWidth = cols - 4; // box borders + padding
 
   const headerText = `bdralph  •  Iter ${state.iteration} / ${state.maxIterations}  •  ${state.workerMode}  •  ${elapsed}`;
