@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -140,9 +141,24 @@ describe("E2E-01 — fixture infrastructure (no-llm mode)", () => {
 describe.skipIf(mode !== "with-llm")(
   "E2E-01 — full loop (with-llm mode)",
   () => {
-    it("placeholder — loop implementation in M1b+", () => {
-      // Full loop execution tests will be added once bdralph CLI is available
-      expect(true).toBe(true);
+    it("bdralph executes loop and completes with SHIPPED or BLOCKED", () => {
+      const binPath = path.resolve(__dirname, "../../bin/bdralph");
+
+      const result = execSync(
+        `bash ${binPath} "Add input validation to TaskService"`,
+        {
+          encoding: "utf-8",
+          timeout: 120000,
+          cwd: FIXTURE_ROOT,
+          env: { ...process.env },
+        }
+      );
+
+      // Either SHIPPED or BLOCKED is a valid loop completion
+      expect(result).toMatch(/SHIPPED|BLOCKED/);
+      // Summary line contains iteration count and cost
+      expect(result).toMatch(/iteration/i);
+      expect(result).toContain("$");
     });
   }
 );

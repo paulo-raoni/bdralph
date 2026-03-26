@@ -1,0 +1,188 @@
+import { describe, it, expect } from "vitest";
+import { execFileSync } from "node:child_process";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const BIN = path.resolve(__dirname, "../../bin/bdralph");
+
+// Helper: run bdralph and capture result
+function run(
+  args: string[] = [],
+  env: Record<string, string> = {}
+): { stdout: string; exitCode: number } {
+  try {
+    const stdout = execFileSync("bash", [BIN, ...args], {
+      encoding: "utf-8",
+      env: {
+        ...process.env,
+        // Ensure claude is "found" by default (mock it via PATH override)
+        ...env,
+      },
+      timeout: 10000,
+    });
+    return { stdout, exitCode: 0 };
+  } catch (err: unknown) {
+    const e = err as { stdout?: string; stderr?: string; status?: number };
+    return {
+      stdout: (e.stdout ?? "") + (e.stderr ?? ""),
+      exitCode: e.status ?? 1,
+    };
+  }
+}
+
+// Helper: run with a fake PATH that includes a mock claude command
+function runWithClaude(
+  args: string[] = [],
+  env: Record<string, string> = {}
+): { stdout: string; exitCode: number } {
+  const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+  return run(args, {
+    PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+    ...env,
+  });
+}
+
+// Helper: run with a PATH that does NOT include claude
+function runWithoutClaude(
+  args: string[] = [],
+  env: Record<string, string> = {}
+): { stdout: string; exitCode: number } {
+  return run(args, {
+    PATH: "/usr/bin:/bin",
+    ...env,
+  });
+}
+
+// --- Ensure mock claude binary exists ---
+import * as fs from "node:fs";
+
+const mockBinDir = path.resolve(__dirname, "../fixtures/mock-bin");
+const mockClaude = path.join(mockBinDir, "claude");
+
+if (!fs.existsSync(mockBinDir)) {
+  fs.mkdirSync(mockBinDir, { recursive: true });
+}
+if (!fs.existsSync(mockClaude)) {
+  fs.writeFileSync(mockClaude, "#!/bin/bash\nexit 0\n", { mode: 0o755 });
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("CLI smoke tests", () => {
+  // T-01: bdralph --help → exit 0, stdout contains flag names
+  it("T-01: --help shows usage with flag names", () => {
+    const result = runWithClaude(["--help"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("--max");
+    expect(result.stdout).toContain("--budget");
+    expect(result.stdout).toContain("--worker");
+    expect(result.stdout).toContain("--escalate-after");
+    expect(result.stdout).toContain("--reviewer-mode");
+  });
+
+  // T-02: bdralph (no args) → exit 1, stdout contains usage example
+  it("T-02: no args prints usage and exits 1", () => {
+    const result = runWithClaude([]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("Example:");
+  });
+
+  // T-03: bdralph --max abc "task" → exit 1, validation error
+  it("T-03: --max with non-integer exits 1 with error", () => {
+    const result = runWithClaude(["--max", "abc", "task"], {
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("--max");
+  });
+
+  // T-04: bdralph hlep → exit 1, suggests help or prints usage
+  it("T-04: unknown subcommand prints usage", () => {
+    const result = runWithClaude(["hlep"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toMatch(/usage|Unknown argument/i);
+  });
+
+  // T-05: bdralph --mxa 10 "task" → exit 1, suggests --max
+  it("T-05: typo flag --mxa suggests --max", () => {
+    const result = runWithClaude(["--mxa", "10", "task"], {
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("--max");
+  });
+
+  // T-06: bdralph "task" (mocked) → exit 0
+  it("T-06: valid task with mock loop exits 0", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(0);
+  });
+
+  // T-07: flags passed through to mock loop
+  it("T-07: flags passed through to loop", () => {
+    const result = runWithClaude(
+      ["test task", "--max", "5", "--worker", "opus"],
+      { BDRALPH_LOOP_MOCK: "1" }
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("max: 5");
+    expect(result.stdout).toContain("worker: opus");
+  });
+
+  // T-08: BDRALPH_NO_UI=1 bdralph "task" (mocked) → exit 0
+  it("T-08: BDRALPH_NO_UI=1 works in mock mode", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_LOOP_MOCK: "1",
+      BDRALPH_NO_UI: "1",
+    });
+    expect(result.exitCode).toBe(0);
+  });
+
+  // T-09: SHIP summary printed
+  it("T-09: SHIP mock result includes summary", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_LOOP_MOCK: "1",
+      BDRALPH_MOCK_RESULT: "SHIP",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("SHIPPED");
+    expect(result.stdout).toMatch(/iteration/i);
+    expect(result.stdout).toContain("$");
+  });
+
+  // T-10: BLOCKED summary printed
+  it("T-10: BLOCKED mock result includes summary", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_LOOP_MOCK: "1",
+      BDRALPH_MOCK_RESULT: "BLOCKED",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("BLOCKED");
+    expect(result.stdout).toMatch(/iteration/i);
+    expect(result.stdout).toContain("$");
+  });
+
+  // T-11: Claude Code not installed → exit 1, install instruction
+  it("T-11: missing claude command shows install instruction", () => {
+    const result = runWithoutClaude(["test task"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("install");
+  });
+
+  // T-12: Budget zero → exit 1, budget warning
+  it("T-12: BDRALPH_BUDGET=0 exits with budget warning", () => {
+    const result = runWithClaude(["test task"], {
+      BDRALPH_BUDGET: "0",
+      BDRALPH_LOOP_MOCK: "1",
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toMatch(/budget/i);
+  });
+});

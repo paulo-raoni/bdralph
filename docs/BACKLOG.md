@@ -40,6 +40,14 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
 - 3 stop modes, 3 activation triggers
 - Deterministic watchdog for Gas Town
 
+### M6b — REPL terminal
+- `bdralph` with no arguments opens a persistent terminal session
+- Internal `>` prompt for task input, flags configurable interactively
+- Summary at end of each session (SHIP/BLOCKED + iterations + cost)
+- `/clear` — resets loop context, keeps terminal and Second Mind alive
+- `exit` or Second Mind command shuts down the terminal
+- Alerts and Second Mind remain active between sessions
+
 ### M7 — Native Gemini
 - `WORKER_PROVIDER=google` works natively, without curl
 - Gemini Flash as L2/L3 option

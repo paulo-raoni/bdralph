@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# bdralph — governed agentic loop runner for Claude Code.
+# Entry point: parses flags, validates input, calls ralph-loop.sh.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOOP_SCRIPT="$SCRIPT_DIR/../src/loop/ralph-loop.sh"
+
+# --- Defaults ---
+MAX=10
+BUDGET="0.50"
+WORKER="sonnet"
+ESCALATE_AFTER=3
+REVIEWER_MODE="pipeline"
+TASK=""
+
+# --- Known flags (for typo detection) ---
+KNOWN_FLAGS=("--max" "--budget" "--worker" "--escalate-after" "--reviewer-mode" "--help")
+
+# --- Levenshtein distance (bash-only, no external deps) ---
+levenshtein() {
+  local s="$1" t="$2"
+  local sl=${#s} tl=${#t}
+  local -a d
+
+  for ((i = 0; i <= sl; i++)); do d[$((i * (tl + 1)))]=$i; done
+  for ((j = 0; j <= tl; j++)); do d[$j]=$j; done
+
+  for ((i = 1; i <= sl; i++)); do
+    for ((j = 1; j <= tl; j++)); do
+      local cost=1
+      if [[ "${s:i-1:1}" == "${t:j-1:1}" ]]; then cost=0; fi
+      local del=$(( d[((i - 1) * (tl + 1)) + j] + 1 ))
+      local ins=$(( d[(i * (tl + 1)) + j - 1] + 1 ))
+      local sub=$(( d[((i - 1) * (tl + 1)) + j - 1] + cost ))
+      local min=$del
+      if ((ins < min)); then min=$ins; fi
+      if ((sub < min)); then min=$sub; fi
+      d[$((i * (tl + 1) + j))]=$min
+    done
+  done
+
+  echo "${d[$((sl * (tl + 1) + tl))]}"
+}
+
+closest_flag() {
+  local input="$1"
+  local best_flag="" best_dist=999
+
+  for flag in "${KNOWN_FLAGS[@]}"; do
+    local dist
+    dist=$(levenshtein "$input" "$flag")
+    if ((dist < best_dist)); then
+      best_dist=$dist
+      best_flag=$flag
+    fi
+  done
+
+  if ((best_dist <= 3)); then
+    echo "$best_flag"
+  fi
+}
+
+# --- Usage ---
+usage() {
+  cat <<'USAGE'
+bdralph — governed agentic loop runner for Claude Code.
+
+Usage:
+  bdralph <task|task-file> [options]
+
+Example:
+  bdralph "Add input validation to TaskService" --max 10 --worker sonnet
+
+Options:
+  --max N                Max iterations (default: 10)
+  --budget USD           Budget in USD (default: 0.50)
+  --worker MODE          sonnet|opus|auto (default: sonnet)
+  --escalate-after N     Auto escalation threshold (default: 3)
+  --reviewer-mode MODE   pipeline|single (default: pipeline)
+  --help                 Show this help message
+USAGE
+}
+
+# --- Argument parsing (flags and task in any order) ---
+if [[ $# -lt 1 ]]; then
+  echo "Error: Missing task argument." >&2
+  echo "" >&2
+  usage >&2
+  exit 1
+fi
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --max)
+      if [[ -z "${2:-}" || ! "${2:-}" =~ ^[0-9]+$ ]]; then
+        echo "Error: --max requires a positive integer. Got: '${2:-}'" >&2
+        exit 1
+      fi
+      MAX="$2"
+      shift 2
+      ;;
+    --budget)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --budget requires a value." >&2
+        exit 1
+      fi
+      BUDGET="$2"
+      shift 2
+      ;;
+    --worker)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --worker requires a value." >&2
+        exit 1
+      fi
+      WORKER="$2"
+      shift 2
+      ;;
+    --escalate-after)
+      if [[ -z "${2:-}" || ! "${2:-}" =~ ^[0-9]+$ ]]; then
+        echo "Error: --escalate-after requires a positive integer. Got: '${2:-}'" >&2
+        exit 1
+      fi
+      ESCALATE_AFTER="$2"
+      shift 2
+      ;;
+    --reviewer-mode)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --reviewer-mode requires a value." >&2
+        exit 1
+      fi
+      REVIEWER_MODE="$2"
+      shift 2
+      ;;
+    --*)
+      suggestion=$(closest_flag "$1")
+      if [[ -n "$suggestion" ]]; then
+        echo "Unknown flag: $1. Did you mean $suggestion?" >&2
+      else
+        echo "Unknown flag: $1." >&2
+      fi
+      exit 1
+      ;;
+    *)
+      # Positional argument — task or help-like typo
+      if [[ -z "$TASK" ]]; then
+        # Check for help-like typos (single word, not a file)
+        if [[ "$1" != *" "* && ! -f "$1" ]]; then
+          _help_dist=$(levenshtein "$1" "help")
+          if ((_help_dist <= 2)); then
+            usage
+            exit 1
+          fi
+        fi
+        TASK="$1"
+        shift
+      else
+        echo "Unknown argument: $1." >&2
+        usage >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+# --- Pre-flight checks ---
+
+# Task is required
+if [[ -z "$TASK" ]]; then
+  echo "Error: Missing task argument." >&2
+  echo "" >&2
+  usage >&2
+  exit 1
+fi
+
+# Check Claude Code is installed
+if ! command -v claude &>/dev/null; then
+  echo "Error: Claude Code CLI is not installed or not in PATH." >&2
+  echo "" >&2
+  echo "Install it with:" >&2
+  echo "  npm install -g @anthropic-ai/claude-code" >&2
+  exit 1
+fi
+
+# Budget zero check (via env override)
+if [[ "${BDRALPH_BUDGET:-}" == "0" ]]; then
+  echo "Error: Budget is zero. Cannot start a loop with no budget." >&2
+  echo "Set a positive budget with --budget or BDRALPH_BUDGET." >&2
+  exit 1
+fi
+
+# --- Mock mode (testing only) ---
+if [[ "${BDRALPH_LOOP_MOCK:-}" == "1" ]]; then
+  mock_result="${BDRALPH_MOCK_RESULT:-SHIP}"
+  echo "bdralph mock mode"
+  echo "task: $TASK"
+  echo "max: $MAX"
+  echo "budget: $BUDGET"
+  echo "worker: $WORKER"
+  echo "escalate-after: $ESCALATE_AFTER"
+  echo "reviewer-mode: $REVIEWER_MODE"
+  if [[ "$mock_result" == "SHIP" ]]; then
+    echo ""
+    echo "SHIPPED — iteration 1 — \$0.02"
+  else
+    echo ""
+    echo "BLOCKED — iteration 3 — \$0.15"
+  fi
+  exit 0
+fi
+
+# --- Call the loop ---
+exec bash "$LOOP_SCRIPT" "$TASK" \
+  --max "$MAX" \
+  --budget "$BUDGET" \
+  --worker "$WORKER" \
+  --escalate-after "$ESCALATE_AFTER" \
+  --reviewer-mode "$REVIEWER_MODE"

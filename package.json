@@ -2,12 +2,15 @@
   "name": "bdralph",
   "version": "0.0.1",
   "private": true,
+  "bin": {
+    "bdralph": "bin/bdralph"
+  },
   "scripts": {
     "test": "cd fixtures/playground && npm test",
     "test:watch": "cd fixtures/playground && npm run test:watch",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "build": "echo \"No build yet — M1b will add it\"",
-    "lint": "echo \"No lint yet — M1b will add it\"",
+    "build": "echo 'No build step — bdralph is a bash entry point'",
+    "lint": "shellcheck bin/bdralph src/loop/*.sh || true",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
