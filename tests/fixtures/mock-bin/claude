@@ -1,2 +1,5 @@
 #!/bin/bash
+if [ "${BDRALPH_MOCK_DUMP_PROMPT:-}" = "1" ]; then
+  cat
+fi
 exit 0
