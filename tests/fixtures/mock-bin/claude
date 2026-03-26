@@ -15,4 +15,7 @@ if [ "${BDRALPH_MOCK_WRITE_ITER_LOG:-}" = "1" ]; then
 }
 EOF
 fi
+if [ -n "${BDRALPH_MOCK_STDOUT_CONTENT:-}" ]; then
+  echo "${BDRALPH_MOCK_STDOUT_CONTENT}"
+fi
 exit 0

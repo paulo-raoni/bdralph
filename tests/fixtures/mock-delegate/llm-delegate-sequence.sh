@@ -1,6 +1,7 @@
 #!/bin/bash
 # Mock LLM delegate — reads responses from MOCK_SEQUENCE_FILE line by line.
 # Consumes one line per invocation. Falls back to PASS when exhausted.
+# When MOCK_LLM_CLASSIFICATION is set, appends CLASSIFICATION line to every response.
 SEQUENCE_FILE="${MOCK_SEQUENCE_FILE:-}"
 RESPONSE="PASS"
 if [ -n "$SEQUENCE_FILE" ] && [ -f "$SEQUENCE_FILE" ]; then
@@ -9,6 +10,9 @@ if [ -n "$SEQUENCE_FILE" ] && [ -f "$SEQUENCE_FILE" ]; then
 fi
 [ -z "$RESPONSE" ] && RESPONSE="PASS"
 echo "$RESPONSE"
+if [ -n "${MOCK_LLM_CLASSIFICATION:-}" ]; then
+  echo "CLASSIFICATION: ${MOCK_LLM_CLASSIFICATION}"
+fi
 node -e "
   require('fs').writeFileSync('/tmp/llm_delegate_usage.json',
     JSON.stringify({ input_tokens: 10, output_tokens: 5, cost_usd: 0.0001 }) + '\n'
