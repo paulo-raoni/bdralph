@@ -97,3 +97,11 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
   - Worker implementation parallelism — Claude Code CLI and Codex already
     parallelize independent tool calls natively; bdralph does not need to
     manage this.
+- **`RALPH_DIR` overridable via env var** — `RALPH_DIR` is currently hardcoded as
+  `$REPO_ROOT/artifacts/bdralph` in `ralph-loop.sh` with no way to override it.
+  This causes test files that use `artifacts/bdralph/` directly to share state
+  when run in parallel. Long-term fix: add
+  `RALPH_DIR="${BDRALPH_RALPH_DIR:-$REPO_ROOT/artifacts/bdralph}"` to the loop
+  so tests can isolate their artifact directories. The immediate workaround
+  (`fileParallelism: false` in vitest.config.ts) is in place and sufficient until
+  the test suite grows.

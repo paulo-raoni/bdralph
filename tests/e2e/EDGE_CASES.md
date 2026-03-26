@@ -132,3 +132,11 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 | PANEL-04 | BDRALPH_NO_UI=1 — Ink panel does not render | automated (PANEL-04) |
 | PANEL-05 | Panel frames do not stack — single render frame visible at a time | not implemented |
 | PANEL-06 | Panel cleans up terminal on SIGTERM — cursor restored, screen cleared | not implemented |
+
+---
+
+## Trace pipeline (1)
+
+| ID | Case | Status |
+|---|---|---|
+| T-TRACE-10 | L1 sensitive path escalation — L1 detects sensitive path in diff, escalates to L4, l1_escalated field is true in L4 trace | not implemented (requires git state manipulation) |

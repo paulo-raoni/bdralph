@@ -141,6 +141,19 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 
 ---
 
+### L-BASH-08 — `local` dentro de main loop body causa erro de sintaxe em bash
+
+**O que aconteceu:** O addendum do M3 instruía `local _l4s_feedback=...` dentro do
+main loop body (fora de qualquer função). Bash retorna erro:
+"local: can only be used in a function".
+
+**O que aprendemos:** `local` só é válido dentro de funções bash. No main loop body,
+sempre usar atribuição simples. Para evitar colisão de nomes com variáveis de funções
+que já usam o mesmo nome, prefixar com underscore (`_l4s_feedback` em vez de
+`l4_feedback`).
+
+---
+
 ## 3. Testes — padrões e anti-padrões
 
 ### L-TEST-01 — Teardown de testes nunca deve usar `rm -rf` em diretórios com arquivos tracked
@@ -202,6 +215,22 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 **O que aconteceu:** Testes de uma feature do REPL chamavam `session.dispatch()` individualmente. Isso testava que o dispatch funciona — o que já era verdade antes do PR. A feature real (processamento no loop de `start()`) ficou sem cobertura. A extensão rejeitou o PR.
 
 **O que aprendemos:** Sempre perguntar: "este teste falha se eu reverter a mudança?" Features que modificam um loop devem ser testadas exercitando o loop com input real, não as funções internas isoladamente.
+
+---
+
+### L-TEST-08 — Assertions que contradizem decisões de design falham mesmo com implementação correta
+
+**O que aconteceu:** T-ITER-04 originalmente assertava
+`toContain("mock strategy from previous iteration")` no stdout do loop. A assertion
+estava correta para um sistema que injeta o conteúdo do iteration-log no prompt —
+mas M4-05 decide que o loop passa o PATH, não o conteúdo. A assertion teria falhado
+sempre, mesmo com implementação perfeita.
+
+**O que aprendemos:** Antes de escrever assertions de teste, verificar as decisions do
+milestone para confirmar o comportamento exato. Assertions que testam o que o sistema
+DEVERIA fazer segundo o design do implementador — não o que as decisions dizem — são a
+fonte mais comum de testes que passam com implementação errada ou falham com
+implementação correta.
 
 ---
 
@@ -357,6 +386,21 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 
 ---
 
+### L-PROMPT-11 — Verificação completa antes de declarar prompt pronto
+
+**O que aconteceu:** O prompt do M3 foi declarado pronto duas vezes antes de
+estar realmente completo. Cada rodada de verificação encontrou um problema real:
+(1) addendum fora do lugar com `local` fora de função, (2) sequências de mock com
+número errado de chamadas para pipeline mode, (3) bloco de comentário de rascunho
+poluindo o teste T-TRACE-07.
+
+**O que aprendemos:** Antes de declarar um prompt pronto, fazer leitura completa do
+arquivo e verificar: estrutura linear coerente, sem appends fora de ordem, variáveis
+com escopo correto (`local` dentro de funções, plain assignment no main loop),
+sequências de mock matematicamente corretas para o número de layers × iterações.
+
+---
+
 ## 6. Fluxo de PR e governança
 
 ### L-PR-01 — Branch sempre antes de commitar — nunca assumir que o executor vai criar
@@ -444,6 +488,19 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 **O que aconteceu:** O README foi escrito primeiro descrevendo o estado alvo, revisado pela extensão que identificou inconsistências com o código atual, e só então a implementação começou. Isso evitou que o executor implementasse uma arquitetura diferente da desejada.
 
 **O que aprendemos:** Para mudanças arquiteturais complexas: escrever o README do estado alvo → revisar com extensão → implementar. O README serve como spec que todos (humano, extensão, CLI) podem referenciar.
+
+---
+
+### L-PR-12 — Fix descoberto na branch vai na mesma PR, não em PR separado
+
+**O que aconteceu:** O executor reportou flakiness de testes ao entregar M4. A primeira
+resposta foi gerar um prompt de fix separado (novo PR). O operador questionou e a
+solução correta (adicionar o fix na branch ativa antes do merge) foi imediatamente
+óbvia.
+
+**O que aprendemos:** Quando um issue é descoberto antes do merge de uma branch, o fix
+vai na mesma branch/PR. Um PR separado só faz sentido se o issue for encontrado depois
+do merge.
 
 ---
 
