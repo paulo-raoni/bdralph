@@ -135,6 +135,7 @@ describe("Trace smoke tests", () => {
       MOCK_SEQUENCE_FILE: seqFile,
       BDRALPH_MOCK_DUMP_PROMPT: "1",
       BDRALPH_TRACE_HISTORY: "3",
+      BDRALPH_SM_THRESHOLD: "0",
     });
     expect(result.stdout).toContain("L4 TRACE HISTORY");
     // cleanup
@@ -168,6 +169,7 @@ describe("Trace smoke tests", () => {
       MOCK_SEQUENCE_FILE: seqFile,
       BDRALPH_MOCK_DUMP_PROMPT: "1",
       BDRALPH_TRACE_HISTORY: "1",
+      BDRALPH_SM_THRESHOLD: "0",
     });
     // With TRACE_HISTORY=1, the final iteration (iter 3) should only show l4-iteration-2.json.
     // l4-iteration-1.json may appear in iter 2's prompt (it's the only L4 trace then),
