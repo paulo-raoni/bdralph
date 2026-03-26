@@ -173,9 +173,9 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 
 ### L-TEST-04 — node-pty: sempre esperar pelo prompt antes do próximo comando
 
-**O que aconteceu:** Testes enviavam comandos sequencialmente sem esperar pelo prompt `agentic > `. Os inputs chegavam fora de ordem e os testes eram não-determinísticos.
+**O que aconteceu:** Testes enviavam comandos sequencialmente sem esperar pelo prompt do processo. Os inputs chegavam fora de ordem e os testes eram não-determinísticos.
 
-**O que aprendemos:** Com node-pty e readline interativo, sempre esperar pelo prompt antes de enviar o próximo comando. Sem a espera, o readline buffer mistura inputs de comandos diferentes.
+**O que aprendemos:** Com node-pty e readline interativo, sempre esperar pelo prompt do processo antes de enviar o próximo comando. Sem a espera, o readline buffer mistura inputs de comandos diferentes.
 
 **Padrão adotado no bdralph:** `waitFor(terminal, PROMPT)` → `terminal.write(command + '\r')` → `waitFor(terminal, expectedOutput)`.
 
@@ -219,7 +219,7 @@ Cada entrada tem: o que aconteceu, o que aprendemos, e quando aplicável — o f
 
 ### L-LOOP-02 — Governance files no prompt do loop travam o review pipeline
 
-**O que aconteceu:** Um prompt incluía steps para editar governance files (`.ai/`, `CLAUDE.md`). O L1 detectou sensitive paths e escalou para L4. O L2 ficou bloqueando por "inconsistência na lista de arquivos" porque o worker não conseguia executar os steps mas o summary afirmava que havia tentado. O loop consumiu todas as iterações sem convergir.
+**O que aconteceu:** Um prompt incluía steps para editar sensitive paths (`CLAUDE.md`, `docs/decisions/`, `docs/PROGRESS.md`, `docs/BACKLOG.md`, `.githooks/`, `src/loop/`). O L1 detectou sensitive paths e escalou para L4. O L2 ficou bloqueando por "inconsistência na lista de arquivos" porque o worker não conseguia executar os steps mas o summary afirmava que havia tentado. O loop consumiu todas as iterações sem convergir.
 
 **O que aprendemos:** Nunca incluir edição de sensitive paths dentro do prompt do loop. O review pipeline não sabe distinguir "worker foi impedido por regra válida" de "worker errou" — e bloqueia.
 
