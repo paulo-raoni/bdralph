@@ -33,7 +33,7 @@ json_escape() {
   node -e "process.stdout.write(JSON.stringify(process.argv[1]))" -- "$1"
 }
 
-_BDRALPH_TMPDIR="${TMPDIR:-$(node -e "process.stdout.write(require('os').tmpdir())")}"
+_BDRALPH_TMPDIR="$(node -e "process.stdout.write(require('os').tmpdir())")"
 LLM_RESPONSE_FILE="${_BDRALPH_TMPDIR}/llm_response.json"
 USAGE_FILE="${_BDRALPH_TMPDIR}/llm_delegate_usage.json"
 

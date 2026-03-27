@@ -174,7 +174,7 @@ elif [ ! -t 1 ]; then UI_ENABLED=false
 elif [ "${TERM:-}" = "dumb" ] || [ -z "${TERM:-}" ]; then UI_ENABLED=false
 fi
 
-_BDRALPH_TMPDIR="${TMPDIR:-$(node -e "process.stdout.write(require('os').tmpdir())")}"
+_BDRALPH_TMPDIR="$(node -e "process.stdout.write(require('os').tmpdir())")"
 UI_STATE_PREFIX="${_BDRALPH_TMPDIR}/ralph_ui_${SESSION_ID}"
 UI_WORKER_OUTPUT_FILE="${UI_STATE_PREFIX}_worker_output.txt"
 WORKER_STDOUT_FILE="${UI_STATE_PREFIX}_worker_stdout.txt"
