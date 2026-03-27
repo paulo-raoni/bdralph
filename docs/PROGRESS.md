@@ -22,8 +22,14 @@
 | M7 — Native Gemini SDK | #22 | ✅ src/loop/providers/gemini.ts via @google/generative-ai SDK. llm-delegate.sh delegates gemini-sdk provider to gemini.ts via npx tsx. BDRALPH_GEMINI_INPUT/OUTPUT_PRICE env vars. T-GEMINI-01..02 pass. |
 | chore: validation tests + reorganization | #23 | ✅ Test dirs reorganized from milestone-based to architecture-based (loop/, panel/). 7 new tests: panel responsiveness (PANEL-R-01..04), BLOCKED path (T-BLOCKED-01..02), bdralph ask without loop (T-CLI-ASK-01). 71 tests passing (11 files). |
 | fix: CLASSIFICATION feedback leak + ls pipefail | #24 | ✅ sed '/^CLASSIFICATION:/d' added to FEEDBACK_TEXT pipeline — strips L2 metadata before writing review-feedback.txt. ls glob wrapped in { ... \|\| true; } to prevent exit 2 under pipefail. T-BLOCKED-01 updated to --max 2. |
+| docs: PROGRESS + LEARNINGS M5–M7 | #25 | ✅ PROGRESS and LEARNINGS updated through M7. |
+| fix: devcontainer PATH, /dev/tty guard, L2 git diff | #26 | ✅ BUG-01 (node_modules/.bin PATH), BUG-02 (/dev/tty ENXIO guard), BUG-04 (L2 git diff main...HEAD). 11 new tests (T-BUG01, T-UI-01..05, PANEL-05, T-INK-CONTENT-01..03, T-M5-08). 82 tests passing. |
+| fix: replace node_modules/.bin PATH hack with npm link | #27 | ✅ BUG-05: npm link replaces incorrect PATH manipulation in setup.sh. T-BUG01 updated to verify PATH via which. 82 tests passing. |
+| fix: resolve symlink + shellcheck warnings | #28 | ✅ BUG-06: readlink -f in bin/bdralph fixes SCRIPT_DIR when invoked via npm link symlink. Shellcheck lint gate now exits 0 (zero warnings). T-BUG06 added. L-BASH-11 documented. 83 tests passing. |
+| docs: complete README | #29 | ✅ README rewritten from scratch: table of contents, status, quick start, CLI reference, Mermaid diagrams (component map, pipeline, SHIP-ON-FAILURE, Second Mind), env vars, providers, project structure, runtime output, known issues. |
 
 ## Notes
 
 - Repo created and bootstrapped. devcontainer operational.
 - Factory frozen at M53 (50 tests passing). Factory PR marking M53 complete still pending — operator must do this before resuming factory work.
+- Manual testing session completed (partial): T-MAN-01 ✅, T-MAN-02 ✅ (SHIP in 2 iterations, $0.000362 reviewer cost), T-MAN-03 ❌ (Ink panel blocked by devcontainer /dev/tty), T-MAN-04 ⚠️ (stop signal timing inconclusive). Bugs found and fixed in PRs #26–#28.
