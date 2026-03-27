@@ -3,8 +3,9 @@
 # Sourceable library: source src/loop/cost-guard.sh
 # Uses node for all JSON reading/writing and arithmetic.
 
-COST_GUARD_SESSION_FILE="/tmp/cost_guard_session.json"
-COST_GUARD_AUDIT_FILE="/tmp/cost_guard_audit.jsonl"
+_CG_TMPDIR="$(node -e "process.stdout.write(require('os').tmpdir().replace(/\\\\/g,'/'))")"
+COST_GUARD_SESSION_FILE="${_CG_TMPDIR}/cost_guard_session.json"
+COST_GUARD_AUDIT_FILE="${_CG_TMPDIR}/cost_guard_audit.jsonl"
 
 # --- cost_guard_init ---
 # Initializes a session. Resets accumulated cost to zero.

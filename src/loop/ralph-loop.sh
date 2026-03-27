@@ -174,7 +174,8 @@ elif [ ! -t 1 ]; then UI_ENABLED=false
 elif [ "${TERM:-}" = "dumb" ] || [ -z "${TERM:-}" ]; then UI_ENABLED=false
 fi
 
-UI_STATE_PREFIX="/tmp/ralph_ui_${SESSION_ID}"
+_BDRALPH_TMPDIR="$(node -e "process.stdout.write(require('os').tmpdir().replace(/\\\\/g,'/'))")"
+UI_STATE_PREFIX="${_BDRALPH_TMPDIR}/ralph_ui_${SESSION_ID}"
 UI_WORKER_OUTPUT_FILE="${UI_STATE_PREFIX}_worker_output.txt"
 WORKER_STDOUT_FILE="${UI_STATE_PREFIX}_worker_stdout.txt"
 UI_RENDER_LOCK_DIR="${UI_STATE_PREFIX}_render.lock"
@@ -203,9 +204,17 @@ if [ "$INK_HAS_TTY" = "true" ] || { [ -n "${BDRALPH_INK_CAPTURE_FILE:-}" ] && [ 
   UI_ENABLED=false
   export BDRALPH_RALPH_DIR="$RALPH_DIR"
   if [ "$INK_HAS_TTY" = "true" ]; then
-    setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+    if command -v setsid &>/dev/null; then
+      setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+    else
+      node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+    fi
   else
-    setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" 2>/dev/null &
+    if command -v setsid &>/dev/null; then
+      setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" 2>/dev/null &
+    else
+      node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" 2>/dev/null &
+    fi
   fi
   INK_RENDERER_PID=$!
 fi
@@ -937,9 +946,9 @@ call_llm_delegate() {
   output=$(bash "$LLM_DELEGATE" "$provider" "$prompt") || return 1
   REVIEW_OUTPUT="$output"
 
-  if [ -f /tmp/llm_delegate_usage.json ]; then
+  if [ -f "${_BDRALPH_TMPDIR}/llm_delegate_usage.json" ]; then
     local usage_json li lo lc
-    usage_json=$(cat /tmp/llm_delegate_usage.json 2>/dev/null || true)
+    usage_json=$(cat "${_BDRALPH_TMPDIR}/llm_delegate_usage.json" 2>/dev/null || true)
     if [ -n "$usage_json" ]; then
       li=$(printf '%s' "$usage_json" | read_llm_usage_field input_tokens 0)
       lo=$(printf '%s' "$usage_json" | read_llm_usage_field output_tokens 0)
@@ -1801,7 +1810,7 @@ Be concise and actionable."
 
   # Call delegate — use BDRALPH_SM_DELEGATE if set, otherwise LLM_DELEGATE
   local _sm_delegate="${BDRALPH_SM_DELEGATE:-$LLM_DELEGATE}"
-  local _sm_tmp="/tmp/sm_response_$$.txt"
+  local _sm_tmp="${_BDRALPH_TMPDIR}/sm_response_$$.txt"
   if bash "$_sm_delegate" "openai-standard" "$sm_prompt" > "$_sm_tmp" 2>/dev/null; then
     cat "$_sm_tmp" > "$RALPH_DIR/second-mind-response.txt"
   else
