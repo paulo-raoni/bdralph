@@ -363,4 +363,34 @@ describe("CLI smoke tests", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("budget: 1.25");
   });
+
+  // T-BUG06: bdralph resolves LOOP_SCRIPT correctly when invoked via symlink
+  it("T-BUG06: bdralph --help works when invoked via absolute symlink path", () => {
+    // Simulate symlink invocation by calling the binary via its npm-global path
+    // Falls back to direct invocation if npm link was not run
+    const npmGlobalBin = execFileSync("npm", ["prefix", "-g"], {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim() + "/bin/bdralph";
+
+    const binToUse = fs.existsSync(npmGlobalBin) ? npmGlobalBin : BIN;
+    const result = (() => {
+      try {
+        const stdout = execFileSync("bash", [binToUse, "--help"], {
+          encoding: "utf-8",
+          timeout: 5000,
+          env: { ...process.env },
+        });
+        return { stdout, exitCode: 0 };
+      } catch (err: unknown) {
+        const e = err as { stdout?: string; stderr?: string; status?: number };
+        return { stdout: (e.stdout ?? "") + (e.stderr ?? ""), exitCode: e.status ?? 1 };
+      }
+    })();
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("--max");
+    // Must not contain symlink resolution error
+    expect(result.stdout).not.toContain("No such file or directory");
+  });
 });

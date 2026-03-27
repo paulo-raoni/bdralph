@@ -4,7 +4,7 @@ set -euo pipefail
 # bdralph — governed agentic loop runner for Claude Code.
 # Entry point: parses flags, validates input, calls ralph-loop.sh.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 LOOP_SCRIPT="$SCRIPT_DIR/../src/loop/ralph-loop.sh"
 
 # --- Defaults ---
