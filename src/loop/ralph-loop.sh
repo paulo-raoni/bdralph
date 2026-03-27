@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2001  # sed patterns here are clearer than bash ${//} equivalents
 set -euo pipefail
 
 # ralph-loop.sh — bdralph core loop.
@@ -16,7 +17,7 @@ LOGS_DIR="$REPO_ROOT/logs"
 LLM_DELEGATE="${BDRALPH_LLM_DELEGATE:-$LOOP_DIR/llm-delegate.sh}"
 
 # Source cost guard
-# shellcheck source=cost-guard.sh
+# shellcheck disable=SC1091  # cost-guard.sh is sourced at runtime from LOOP_DIR
 source "$LOOP_DIR/cost-guard.sh"
 
 # --- Defaults ---
@@ -264,6 +265,7 @@ ui_clamp_width() {
   printf '%s' "$cols"
 }
 
+# shellcheck disable=SC2317  # called indirectly via trap
 ui_repeat_char() {
   local char="$1"
   local count="$2"
@@ -748,6 +750,7 @@ ui_init() {
   UI_TIMER_PID=$!
 }
 
+# shellcheck disable=SC2317  # called indirectly via trap
 ui_cleanup() {
   if [ "${BASHPID:-$$}" != "${UI_OWNER_PID:-}" ]; then
     return 0
@@ -946,11 +949,10 @@ call_llm_delegate() {
 # --- run_l1_sensitivity_check ---
 # L1: Pure bash, no LLM, $0 cost.
 # Builds VERIFIED_FILE_LIST via git and checks against SENSITIVE_PATHS.
-# Sets: VERIFIED_FILE_LIST, L1_RESULT, L1_WARN_REASON, L1_FEEDBACK, L1_CONTEXT_BLOCK
+# Sets: VERIFIED_FILE_LIST, L1_RESULT, L1_FEEDBACK, L1_CONTEXT_BLOCK
 run_l1_sensitivity_check() {
   VERIFIED_FILE_LIST=""
   L1_RESULT="clean"
-  L1_WARN_REASON=""
   L1_FEEDBACK=""
   L1_CONTEXT_BLOCK=""
 
@@ -974,13 +976,12 @@ run_l1_sensitivity_check() {
 
   if [ "$git_available" = "false" ]; then
     L1_RESULT="warn"
-    L1_WARN_REASON="git detection unavailable"
     L1_FEEDBACK="[L1 — Sensitivity Check: WARN]
 Git detection unavailable. Proceeding without verified file list."
     L1_CONTEXT_BLOCK="=== L1 CONTEXT ===
 WARNING: Git detection unavailable. No verified file list.
 === END L1 CONTEXT ==="
-    ui_set_agent_state l1 done "WARN" 0
+    ui_set_agent_state l1 "done" "WARN" 0
     ui_write_value l1_tokens "0"
     status_echo "  ⚠️  L1: git detection unavailable"
     write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
@@ -990,14 +991,13 @@ WARNING: Git detection unavailable. No verified file list.
 
   if [ -z "$file_list" ]; then
     L1_RESULT="warn"
-    L1_WARN_REASON="no changes detected"
     L1_FEEDBACK="[L1 — Sensitivity Check: WARN]
 No file changes detected in working tree. L2 will evaluate whether
 this is valid given the task description."
     L1_CONTEXT_BLOCK="=== L1 CONTEXT ===
 WARNING: No file changes detected in working tree.
 === END L1 CONTEXT ==="
-    ui_set_agent_state l1 done "WARN" 0
+    ui_set_agent_state l1 "done" "WARN" 0
     ui_write_value l1_tokens "0"
     status_echo "  ⚠️  L1: no changes detected"
     write_trace "l1" "$CURRENT_ITERATION" "PASS" "0" "0" "0" "null" "$L1_FEEDBACK" \
@@ -1032,7 +1032,7 @@ $VERIFIED_FILE_LIST
 SENSITIVE FILES DETECTED:
 $(echo -e "$sensitive_found")
 === END L1 CONTEXT ==="
-    ui_set_agent_state l1 done "SENSITIVE" 0
+    ui_set_agent_state l1 "done" "SENSITIVE" 0
     ui_write_value l1_tokens "0"
     status_echo "  🔴 L1: sensitive files detected — escalating to L4"
     local l1_sensitive_list
@@ -1056,7 +1056,7 @@ $VERIFIED_FILE_LIST
 
 No sensitive paths detected.
 === END L1 CONTEXT ==="
-  ui_set_agent_state l1 done "PASS" 0
+  ui_set_agent_state l1 "done" "PASS" 0
   ui_write_value l1_tokens "0"
   status_echo "  ✅ L1: clean — $(echo "$VERIFIED_FILE_LIST" | wc -l | tr -d ' ') file(s) verified"
   local l1_clean_count
@@ -1153,7 +1153,7 @@ run_single_review() {
 
     if [ "$EXTREME_FALLBACK_ACTIVE" = "true" ]; then
       REVIEW_OUTPUT="SHIP"
-      ui_set_agent_state l3 done "SHIP" 0
+      ui_set_agent_state l3 "done" "SHIP" 0
       ui_write_value l3_tokens "0"
       return 0
     elif [ "$ACTIVE_REVIEWER" = "claude-haiku" ]; then
@@ -1162,9 +1162,9 @@ run_single_review() {
         REVIEW_OUTPUT="REVISE: fallback provider unavailable."
       fi
       if echo "$REVIEW_OUTPUT" | head -1 | grep -q "^SHIP"; then
-        ui_set_agent_state l3 done "SHIP" 0
+        ui_set_agent_state l3 "done" "SHIP" 0
       else
-        ui_set_agent_state l3 done "REVISE" 0
+        ui_set_agent_state l3 "done" "REVISE" 0
       fi
       ui_write_value l3_tokens "0"
       return 0
@@ -1174,9 +1174,9 @@ run_single_review() {
         REVIEW_OUTPUT="REVISE: fallback provider unavailable."
       fi
       if echo "$REVIEW_OUTPUT" | head -1 | grep -q "^SHIP"; then
-        ui_set_agent_state l3 done "SHIP" 0
+        ui_set_agent_state l3 "done" "SHIP" 0
       else
-        ui_set_agent_state l3 done "REVISE" 0
+        ui_set_agent_state l3 "done" "REVISE" 0
       fi
       ui_write_value l3_tokens "0"
       return 0
@@ -1185,9 +1185,9 @@ run_single_review() {
     # External reviewer via call_llm_delegate (handles cost guard + cost recording)
     if call_llm_delegate "$ACTIVE_REVIEWER" "$review_prompt"; then
       if echo "$REVIEW_OUTPUT" | head -1 | grep -q "^SHIP"; then
-        ui_set_agent_state l3 done "SHIP" 0
+        ui_set_agent_state l3 "done" "SHIP" 0
       else
-        ui_set_agent_state l3 done "REVISE" 0
+        ui_set_agent_state l3 "done" "REVISE" 0
       fi
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
       return 0
@@ -1275,7 +1275,8 @@ run_multilayer_review() {
     status_echo "  ⬆️  L1 → L4 direct escalation (sensitive files)"
     PIPELINE_LAYERS="L1→L4"
 
-    local l4_prompt="You are the governance reviewer — the final authority in a Ralph Loop review pipeline.
+    local l4_prompt
+    l4_prompt="You are the governance reviewer — the final authority in a Ralph Loop review pipeline.
 L1 (sensitivity check) detected modifications to sensitive files and escalated directly to you.
 
 TASK: $task
@@ -1308,7 +1309,7 @@ REVISE: [one paragraph of specific actionable feedback]"
     status_echo "  L4 result: $(echo "$l4_result" | head -1)"
 
     if echo "$l4_result" | head -1 | grep -q "^SHIP"; then
-      ui_set_agent_state l4 done "SHIP" 0
+      ui_set_agent_state l4 "done" "SHIP" 0
       ui_write_value l4_tokens ""
       write_trace "l4" "$iteration" "SHIP" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1323,7 +1324,7 @@ REVISE: [one paragraph of specific actionable feedback]"
 
 [L4 — Governance Review: REVISE]
 $l4_feedback"
-      ui_set_agent_state l4 done "REVISE" 0
+      ui_set_agent_state l4 "done" "REVISE" 0
       ui_write_value l4_tokens ""
       write_trace "l4" "$iteration" "REVISE" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1427,7 +1428,7 @@ $l2_feedback"
       if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
         l2_fail_detail="FAIL [${LAYER_ACTIVE_PROVIDER} ↑ ${L2_PROVIDER_CHAIN[0]} unavailable]"
       fi
-      ui_set_agent_state l2 done "$l2_fail_detail" 0
+      ui_set_agent_state l2 "done" "$l2_fail_detail" 0
       ui_write_value l2_tokens "$LAST_LLM_TOTAL_TOKENS"
       write_trace "l2" "$iteration" "REVISE" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1478,7 +1479,7 @@ TRIGGERS_NOT_SATISFIED: [one sentence explaining which trigger was not met]"
     if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
       l2_detail="PASS [${LAYER_ACTIVE_PROVIDER} ↑ ${L2_PROVIDER_CHAIN[0]} unavailable]"
     fi
-    ui_set_agent_state l2 done "$l2_detail" 0
+    ui_set_agent_state l2 "done" "$l2_detail" 0
     ui_write_value l2_tokens "$LAST_LLM_TOTAL_TOKENS"
     write_trace "l2" "$iteration" "PASS" \
       "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1491,7 +1492,7 @@ TRIGGERS_NOT_SATISFIED: [one sentence explaining which trigger was not met]"
 [L2 — Protocol Check: PASS]"
   else
     # L2 provider chain exhausted — degrading to single review
-    ui_set_agent_state l2 done "BLOCKED" 0
+    ui_set_agent_state l2 "done" "BLOCKED" 0
     ui_write_value l2_tokens "0"
     status_echo "  ⚠️  L2 provider chain exhausted — degrading to single review"
     cost_guard_block_provider "${L2_PROVIDER_CHAIN[0]}"
@@ -1546,7 +1547,7 @@ ESCALATE when ANY of these apply:
       if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
         l3_detail="SHIP [${LAYER_ACTIVE_PROVIDER} ↑ ${L3_PROVIDER_CHAIN[0]} unavailable]"
       fi
-      ui_set_agent_state l3 done "$l3_detail" 0
+      ui_set_agent_state l3 "done" "$l3_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
       write_trace "l3" "$iteration" "SHIP" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1562,7 +1563,7 @@ ESCALATE when ANY of these apply:
       if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
         l3_escalate_detail="ESCALATE [${LAYER_ACTIVE_PROVIDER} ↑ ${L3_PROVIDER_CHAIN[0]} unavailable]"
       fi
-      ui_set_agent_state l3 done "$l3_escalate_detail" 0
+      ui_set_agent_state l3 "done" "$l3_escalate_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
       write_trace "l3" "$iteration" "PASS" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1587,7 +1588,7 @@ $l3_feedback"
       if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
         l3_revise_detail="REVISE [${LAYER_ACTIVE_PROVIDER} ↑ ${L3_PROVIDER_CHAIN[0]} unavailable]"
       fi
-      ui_set_agent_state l3 done "$l3_revise_detail" 0
+      ui_set_agent_state l3 "done" "$l3_revise_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
       write_trace "l3" "$iteration" "REVISE" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1606,7 +1607,7 @@ $l3_result"
       if [ "$LAYER_FAILOVER_OCCURRED" = "true" ]; then
         l3_unknown_detail="UNKNOWN [${LAYER_ACTIVE_PROVIDER} ↑ ${L3_PROVIDER_CHAIN[0]} unavailable]"
       fi
-      ui_set_agent_state l3 done "$l3_unknown_detail" 0
+      ui_set_agent_state l3 "done" "$l3_unknown_detail" 0
       ui_write_value l3_tokens "$LAST_LLM_TOTAL_TOKENS"
       write_trace "l3" "$iteration" "REVISE" \
         "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1618,7 +1619,7 @@ $l3_result"
     fi
   else
     # L3 provider chain exhausted — degrading to single review
-    ui_set_agent_state l3 done "BLOCKED" 0
+    ui_set_agent_state l3 "done" "BLOCKED" 0
     ui_write_value l3_tokens "0"
     status_echo "  ⚠️  L3 provider chain exhausted — degrading to single review"
     cost_guard_block_provider "${L3_PROVIDER_CHAIN[0]}"
@@ -1631,7 +1632,8 @@ $l3_result"
   status_echo "  🏛️  L4 — Governance review (claude-sonnet)"
   PIPELINE_LAYERS="L1+L2+L3+L4"
 
-  local l4_prompt="You are the governance reviewer — the final authority in a Ralph Loop review pipeline.
+  local l4_prompt
+  l4_prompt="You are the governance reviewer — the final authority in a Ralph Loop review pipeline.
 L3 (quality review) escalated this review to you.
 
 TASK: $task
@@ -1664,7 +1666,7 @@ REVISE: [one paragraph of specific actionable feedback]"
   status_echo "  L4 result: $(echo "$l4_result" | head -1)"
 
   if echo "$l4_result" | head -1 | grep -q "^SHIP"; then
-    ui_set_agent_state l4 done "SHIP" 0
+    ui_set_agent_state l4 "done" "SHIP" 0
     ui_write_value l4_tokens ""
     write_trace "l4" "$iteration" "SHIP" \
       "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1679,7 +1681,7 @@ REVISE: [one paragraph of specific actionable feedback]"
 
 [L4 — Governance Review: REVISE]
 $l4_feedback"
-    ui_set_agent_state l4 done "REVISE" 0
+    ui_set_agent_state l4 "done" "REVISE" 0
     ui_write_value l4_tokens ""
     write_trace "l4" "$iteration" "REVISE" \
       "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -1942,7 +1944,7 @@ SAFETY CONSTRAINTS (mandatory, never violate):
       | tee "$WORKER_STDOUT_FILE"
   fi
   WORK_END=$(date +%s)
-  ui_set_agent_state worker done "done" "$((WORK_END - WORK_START))"
+  ui_set_agent_state worker "done" "done" "$((WORK_END - WORK_START))"
   ui_write_value worker_tokens ""
   ui_capture_worker_output_preview
   status_echo "✓ Work phase completed in $((WORK_END - WORK_START))s"
@@ -2003,7 +2005,7 @@ REVISE: [one paragraph of specific actionable feedback]"
         REVIEW_OUTPUT="REVISE: L4 provider unavailable."
       fi
       if echo "$REVIEW_OUTPUT" | head -1 | grep -q "^SHIP"; then
-        ui_set_agent_state l4 done "SHIP" 0
+        ui_set_agent_state l4 "done" "SHIP" 0
         ui_write_value l4_tokens ""
         write_trace "l4" "$i" "SHIP" \
           "$(node -e "console.log(Math.round(($REVIEWER_COST) * 1e9)/1e9)")" \
@@ -2011,7 +2013,7 @@ REVISE: [one paragraph of specific actionable feedback]"
           "openai-standard" "L4 governance review passed" \
           '"triggered_by": ["l1_escalation"], "consecutive_revises_at_trigger": 0, "l1_escalated": true'
       else
-        ui_set_agent_state l4 done "REVISE" 0
+        ui_set_agent_state l4 "done" "REVISE" 0
         ui_write_value l4_tokens ""
         _l4s_feedback=$(echo "$REVIEW_OUTPUT" | sed 's/^REVISE:[[:space:]]*//')
         write_trace "l4" "$i" "REVISE" \

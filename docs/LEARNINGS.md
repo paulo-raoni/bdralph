@@ -684,3 +684,16 @@ The workaround was `bash bin/bdralph`, which is not the documented interface.
 **Lesson:** Add `node_modules/.bin` to PATH explicitly in `setup.sh` and in `.bashrc`
 when the project relies on locally installed binaries. Do not assume `npx` is an
 acceptable substitute for PATH availability during interactive use.
+
+---
+
+### L-BASH-11 — `dirname "$0"` does not resolve symlinks
+
+**What happened:** `bin/bdralph` uses `SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"` to
+locate `ralph-loop.sh` relative to itself. When the script is invoked via a symlink
+(as created by `npm link`), `$0` is the symlink path, not the real file. `dirname`
+resolves to the symlink's directory, and the relative path to `ralph-loop.sh` breaks.
+
+**Lesson:** When a script needs its own real location (not the invocation path), use
+`readlink -f "$0"` before `dirname`: `SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"`.
+`readlink -f` follows the full symlink chain to the canonical path.
