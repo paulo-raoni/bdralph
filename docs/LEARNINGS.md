@@ -154,6 +154,20 @@ que já usam o mesmo nome, prefixar com underscore (`_l4s_feedback` em vez de
 
 ---
 
+### L-BASH-09 — `ls` com glob sem match retorna exit 2 sob `pipefail`
+
+**O que aconteceu:** `ls "$TRACES_DIR"/l4-iteration-*.json 2>/dev/null` retornava
+exit code 2 quando nenhum arquivo existia (glob sem match). Com `set -euo pipefail`,
+isso matava o script silenciosamente na iteração 2+ quando não havia L4 traces.
+O `2>/dev/null` suprima o stderr mas não o exit code.
+
+**O que aprendemos:** Sob `set -euo pipefail`, `ls` com glob que não encontra arquivos
+retorna exit 2, não 0. O fix correto é envolver em `{ ls ... || true; }` para absorver
+o exit não-zero antes do pipe. Alternativa: usar `find` ou verificar com
+`[ -d "$dir" ] && ls ...` antes.
+
+---
+
 ## 3. Testes — padrões e anti-padrões
 
 ### L-TEST-01 — Teardown de testes nunca deve usar `rm -rf` em diretórios com arquivos tracked
@@ -234,6 +248,20 @@ implementação correta.
 
 ---
 
+### L-TEST-09 — Teste com workaround documenta o bug mas não o resolve
+
+**O que aconteceu:** T-BLOCKED-01 foi entregue com `--max 1` e um comentário
+explicando que `--max 2` causava crash — "a separate bug to investigate". O teste
+passou, o bug ficou documentado apenas no comentário, e o fix só veio num PR
+separado depois.
+
+**O que aprendemos:** Quando um teste usa um workaround para contornar um bug,
+o bug deve ser registrado imediatamente como issue no BACKLOG.md ou como PR de fix
+antes de mergear o teste. Um comentário no código não é rastreamento — some no
+próximo contexto.
+
+---
+
 ## 4. Loop e review pipeline
 
 ### L-LOOP-01 — Bloco de ancoragem é crítico para o worker não meta-raciocinar
@@ -297,6 +325,22 @@ implementação correta.
 **O que aconteceu:** Primeiros testes com tarefas triviais (escrever um comentário de uma linha). Loop demorou 3+ minutos para algo que levaria 10 segundos no Claude Code direto.
 
 **O que aprendemos:** Ralph Loop não é para velocidade — é para autonomia em tarefas longas com iteração e revisão. Threshold correto: tarefas estimadas em mais de 5 minutos de implementação direta.
+
+---
+
+### L-LOOP-08 — Campo interno do L2 vazando para o worker via feedback
+
+**O que aconteceu:** O mock delegate (e potencialmente LLMs reais) retorna uma linha
+`CLASSIFICATION: <value>` após o resultado do review. Essa linha não era filtrada antes
+de ser escrita em `review-feedback.txt`. Na iteração 2+, o worker lia o feedback
+com `CLASSIFICATION: failure` embutido, causando falha silenciosa no `node -e` que
+constrói o work prompt (exit code 2).
+
+**O que aprendemos:** Campos de metadados internos de layers (como `CLASSIFICATION:`)
+devem ser extraídos e descartados do feedback antes de qualquer escrita em estado
+compartilhado. O worker nunca deve ver metadados do reviewer — apenas feedback
+acionável. Fix: `sed '/^CLASSIFICATION:/d'` no pipeline de construção do
+`FEEDBACK_TEXT`, antes da sanitização de caracteres de controle.
 
 ---
 

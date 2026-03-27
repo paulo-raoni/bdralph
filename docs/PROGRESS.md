@@ -15,6 +15,13 @@
 | M2 — Streaming + basic Ink panel | #9, #10 | ✅ Ink panel renders via BDRALPH_INK_UI=1. Worker output streamed via log file. Panel displays iter/max, model, cost, budget, last 10 worker lines. Process group cleanup via setsid + kill -- -PID. 25 tests passing (INK-01..06, T-13..14, PANEL-01..04). |
 | M3 — Per-layer traces | #16 | ✅ L1–L4 write traces/lN-iteration-N.json. traces/ cleaned at session start. Worker reads last N L4 traces via BDRALPH_TRACE_HISTORY (default 3). T-TRACE-01..09, T-TRACE-11 pass. |
 | M4 — Iteration log | #17 | ✅ Worker writes/reads iteration-log.json each iteration. Cleaned at session start. Loop passes path, does not interpret contents. T-ITER-01..05 pass. |
+| chore: pending items pre-M5 | #18 | ✅ lint gate activated (removed \|\| true), T-TRACE-10 in EDGE_CASES.md, 4 learnings added (L-PROMPT-11, L-TEST-08, L-PR-12, L-BASH-08), RALPH_DIR tech debt in BACKLOG. |
+| M5 — Contextual L2 + SHIP-ON-FAILURE | #19 | ✅ L2 receives git diff + L1 trace + worker stdout tail. Classifies worker outcome as pass/failure/safety_impediment in L2 trace. SHIP-ON-FAILURE opt-in via .bdralph.config.json, semantic trigger evaluation via L2. T-M5-01..07 pass. |
+| M6a — bdralph stop + Second Mind | #20 | ✅ bdralph stop (--now/--after-this/--on-fail) and bdralph ask write to operator-signal.json. Loop reads signal at iteration start. Second Mind activates on 3 triggers (explicit, threshold, L4 consecutive REVISEs). T-M6A-01..10 pass. |
+| M6b-panel — Complete panel layout | #21 | ✅ Ink panel extended with Second Mind section (reads second-mind-response.txt), alerts section, dynamic worker lines count based on terminal rows, 4 width/height breakpoints. INK-07..11 pass. |
+| M7 — Native Gemini SDK | #22 | ✅ src/loop/providers/gemini.ts via @google/generative-ai SDK. llm-delegate.sh delegates gemini-sdk provider to gemini.ts via npx tsx. BDRALPH_GEMINI_INPUT/OUTPUT_PRICE env vars. T-GEMINI-01..02 pass. |
+| chore: validation tests + reorganization | #23 | ✅ Test dirs reorganized from milestone-based to architecture-based (loop/, panel/). 7 new tests: panel responsiveness (PANEL-R-01..04), BLOCKED path (T-BLOCKED-01..02), bdralph ask without loop (T-CLI-ASK-01). 71 tests passing (11 files). |
+| fix: CLASSIFICATION feedback leak + ls pipefail | #24 | ✅ sed '/^CLASSIFICATION:/d' added to FEEDBACK_TEXT pipeline — strips L2 metadata before writing review-feedback.txt. ls glob wrapped in { ... \|\| true; } to prevent exit 2 under pipefail. T-BLOCKED-01 updated to --max 2. |
 
 ## Notes
 
