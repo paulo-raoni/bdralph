@@ -1,11 +1,12 @@
 // gemini.ts — Native Gemini provider for bdralph llm-delegate.
 // Called by llm-delegate.sh: npx tsx src/loop/providers/gemini.ts <model> <prompt>
 // Writes response text to stdout.
-// Writes usage JSON to /tmp/llm_delegate_usage.json.
+// Writes usage JSON to $TMPDIR/llm_delegate_usage.json.
 // Exits 1 on error.
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as fs from "node:fs";
+import * as os from "node:os";
 
 const model = process.argv[2];
 const prompt = process.argv[3];
@@ -46,7 +47,8 @@ try {
     cost_usd: Math.round(cost * 1e9) / 1e9,
   };
 
-  fs.writeFileSync("/tmp/llm_delegate_usage.json", JSON.stringify(usageObj, null, 2) + "\n");
+  const tmpDir = process.env.TMPDIR || os.tmpdir();
+  fs.writeFileSync(`${tmpDir}/llm_delegate_usage.json`, JSON.stringify(usageObj, null, 2) + "\n");
 } catch (err: unknown) {
   const msg = err instanceof Error ? err.message : String(err);
   process.stderr.write(`ERROR: Gemini SDK error: ${msg}\n`);

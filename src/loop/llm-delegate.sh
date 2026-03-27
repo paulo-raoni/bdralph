@@ -30,10 +30,12 @@ if ! command -v node &> /dev/null; then
 fi
 
 json_escape() {
-  echo "$1" | node -e "const s=require('fs').readFileSync('/dev/stdin','utf8'); process.stdout.write(JSON.stringify(s))"
+  node -e "process.stdout.write(JSON.stringify(process.argv[1]))" -- "$1"
 }
 
-USAGE_FILE="/tmp/llm_delegate_usage.json"
+_BDRALPH_TMPDIR="${TMPDIR:-$(node -e "process.stdout.write(require('os').tmpdir())")}"
+LLM_RESPONSE_FILE="${_BDRALPH_TMPDIR}/llm_response.json"
+USAGE_FILE="${_BDRALPH_TMPDIR}/llm_delegate_usage.json"
 
 write_usage() {
   local provider="$1"
@@ -42,7 +44,7 @@ write_usage() {
   local input_path="$4"
   local output_path="$5"
   node -e "
-    const d = require('/tmp/llm_response.json');
+    const d = require('${LLM_RESPONSE_FILE}');
     const inp = Number(d${input_path}) || 0;
     const out = Number(d${output_path}) || 0;
     const cost = (inp * ${input_price_per_m} + out * ${output_price_per_m}) / 1e6;
@@ -61,7 +63,7 @@ if [ "$PROVIDER" = "openai-mini" ]; then
     echo "ERROR: OPENAI_API_KEY is not set" >&2
     exit 1
   fi
-  HTTP_STATUS=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
+  HTTP_STATUS=$(curl -s -o "$LLM_RESPONSE_FILE" -w "%{http_code}" \
     --max-time 30 \
     https://api.openai.com/v1/chat/completions \
     -H "Authorization: Bearer $OPENAI_API_KEY" \
@@ -69,10 +71,10 @@ if [ "$PROVIDER" = "openai-mini" ]; then
     -d "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":$(json_escape "$PROMPT")}]}")
   if [ "$HTTP_STATUS" != "200" ]; then
     echo "ERROR: OpenAI API returned HTTP $HTTP_STATUS" >&2
-    cat /tmp/llm_response.json >&2
+    cat "$LLM_RESPONSE_FILE" >&2
     exit 1
   fi
-  node -e "const d=require('/tmp/llm_response.json'); process.stdout.write(d.choices[0].message.content)"
+  node -e "const d=require('${LLM_RESPONSE_FILE}'); process.stdout.write(d.choices[0].message.content)"
   write_usage "openai-mini" "0.15" "0.60" ".usage.prompt_tokens" ".usage.completion_tokens"
 
 elif [ "$PROVIDER" = "openai-cheap" ]; then
@@ -80,7 +82,7 @@ elif [ "$PROVIDER" = "openai-cheap" ]; then
     echo "ERROR: OPENAI_API_KEY is not set" >&2
     exit 1
   fi
-  HTTP_STATUS=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
+  HTTP_STATUS=$(curl -s -o "$LLM_RESPONSE_FILE" -w "%{http_code}" \
     --max-time 30 \
     https://api.openai.com/v1/chat/completions \
     -H "Authorization: Bearer $OPENAI_API_KEY" \
@@ -88,10 +90,10 @@ elif [ "$PROVIDER" = "openai-cheap" ]; then
     -d "{\"model\":\"gpt-5.4-nano\",\"messages\":[{\"role\":\"user\",\"content\":$(json_escape "$PROMPT")}]}")
   if [ "$HTTP_STATUS" != "200" ]; then
     echo "ERROR: OpenAI API returned HTTP $HTTP_STATUS" >&2
-    cat /tmp/llm_response.json >&2
+    cat "$LLM_RESPONSE_FILE" >&2
     exit 1
   fi
-  node -e "const d=require('/tmp/llm_response.json'); process.stdout.write(d.choices[0].message.content)"
+  node -e "const d=require('${LLM_RESPONSE_FILE}'); process.stdout.write(d.choices[0].message.content)"
   write_usage "openai-cheap" "0.10" "0.625" ".usage.prompt_tokens" ".usage.completion_tokens"
 
 elif [ "$PROVIDER" = "openai-standard" ]; then
@@ -99,7 +101,7 @@ elif [ "$PROVIDER" = "openai-standard" ]; then
     echo "ERROR: OPENAI_API_KEY is not set" >&2
     exit 1
   fi
-  HTTP_STATUS=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
+  HTTP_STATUS=$(curl -s -o "$LLM_RESPONSE_FILE" -w "%{http_code}" \
     --max-time 30 \
     https://api.openai.com/v1/chat/completions \
     -H "Authorization: Bearer $OPENAI_API_KEY" \
@@ -107,10 +109,10 @@ elif [ "$PROVIDER" = "openai-standard" ]; then
     -d "{\"model\":\"gpt-5.4-mini\",\"messages\":[{\"role\":\"user\",\"content\":$(json_escape "$PROMPT")}]}")
   if [ "$HTTP_STATUS" != "200" ]; then
     echo "ERROR: OpenAI API returned HTTP $HTTP_STATUS" >&2
-    cat /tmp/llm_response.json >&2
+    cat "$LLM_RESPONSE_FILE" >&2
     exit 1
   fi
-  node -e "const d=require('/tmp/llm_response.json'); process.stdout.write(d.choices[0].message.content)"
+  node -e "const d=require('${LLM_RESPONSE_FILE}'); process.stdout.write(d.choices[0].message.content)"
   write_usage "openai-standard" "0.375" "2.25" ".usage.prompt_tokens" ".usage.completion_tokens"
 
 # gemini-flash -> gemini-2.5-flash (to upgrade: change only the model ID in the URL below)
@@ -119,7 +121,7 @@ elif [ "$PROVIDER" = "gemini-flash" ]; then
     echo "ERROR: GOOGLE_API_KEY is not set" >&2
     exit 1
   fi
-  HTTP_STATUS=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
+  HTTP_STATUS=$(curl -s -o "$LLM_RESPONSE_FILE" -w "%{http_code}" \
     --max-time 30 \
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
     -H "x-goog-api-key: $GOOGLE_API_KEY" \
@@ -128,12 +130,12 @@ elif [ "$PROVIDER" = "gemini-flash" ]; then
     -d "{\"contents\":[{\"parts\":[{\"text\":$(json_escape "$PROMPT")}]}]}")
   if [ "$HTTP_STATUS" != "200" ]; then
     echo "ERROR: Gemini API returned HTTP $HTTP_STATUS" >&2
-    cat /tmp/llm_response.json >&2
+    cat "$LLM_RESPONSE_FILE" >&2
     # Fallback hint
     echo "HINT: If model not found, try gemini-1.5-flash as fallback" >&2
     exit 1
   fi
-  node -e "const d=require('/tmp/llm_response.json'); process.stdout.write(d.candidates[0].content.parts[0].text)"
+  node -e "const d=require('${LLM_RESPONSE_FILE}'); process.stdout.write(d.candidates[0].content.parts[0].text)"
   write_usage "gemini-flash" "0.30" "2.50" ".usageMetadata.promptTokenCount" ".usageMetadata.candidatesTokenCount"
 
 # gemini-sdk -> gemini-2.5-flash via @google/generative-ai SDK
@@ -153,4 +155,4 @@ else
 fi
 
 # Cleanup
-rm -f /tmp/llm_response.json
+rm -f "$LLM_RESPONSE_FILE"
