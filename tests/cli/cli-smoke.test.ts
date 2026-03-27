@@ -208,17 +208,26 @@ describe("CLI smoke tests", () => {
     expect(result.stdout).toContain("ink_ui: unset");
   });
 
-  // T-BUG01: bdralph binary is declared in package.json and the target file exists
-  it("T-BUG01: bdralph binary declared in package.json and target is executable", () => {
-    const pkgPath = path.resolve(__dirname, "../../package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    expect(pkg.bin).toBeDefined();
-    expect(pkg.bin.bdralph).toBeDefined();
-    const binTarget = path.resolve(__dirname, "../..", pkg.bin.bdralph);
-    expect(fs.existsSync(binTarget)).toBe(true);
-    const stat = fs.statSync(binTarget);
-    const isExecutable = (stat.mode & 0o111) > 0;
-    expect(isExecutable).toBe(true);
+  // T-BUG01: bdralph is resolvable as a command via PATH (npm link installed)
+  it("T-BUG01: bdralph is resolvable as a command via PATH", () => {
+    try {
+      const result = execFileSync("which", ["bdralph"], {
+        encoding: "utf-8",
+        timeout: 5000,
+      });
+      expect(result.trim()).toBeTruthy();
+      expect(result.trim()).toContain("bdralph");
+    } catch {
+      // which failed — bdralph not in PATH
+      // Check npm link fallback: verify the bin field is correct at minimum
+      const pkgPath = path.resolve(__dirname, "../../package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      expect(pkg.bin?.bdralph).toBeDefined();
+      // Fail with a clear message
+      throw new Error(
+        "bdralph is not available in PATH. Run `npm link` to install it globally."
+      );
+    }
   });
 
   // T-UI-01: bash UI prints session header with task, worker, budget

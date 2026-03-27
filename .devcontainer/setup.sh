@@ -12,9 +12,8 @@ fi
 # Install dependencies
 npm install
 
-# Add node_modules/.bin to PATH for locally installed binaries (e.g. bdralph)
-echo 'export PATH="/workspaces/bdralph/node_modules/.bin:$PATH"' >> ~/.bashrc
-export PATH="/workspaces/bdralph/node_modules/.bin:$PATH"
+# Make bdralph available in PATH
+npm link
 
 # Install Claude Code
 curl -fsSL https://claude.ai/install.sh | bash || true
