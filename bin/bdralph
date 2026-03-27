@@ -24,24 +24,24 @@ levenshtein() {
   local sl=${#s} tl=${#t}
   local -a d
 
-  for ((i = 0; i <= sl; i++)); do d[$((i * (tl + 1)))]=$i; done
-  for ((j = 0; j <= tl; j++)); do d[$j]=$j; done
+  for ((i = 0; i <= sl; i++)); do d[i * (tl + 1)]=$i; done
+  for ((j = 0; j <= tl; j++)); do d[j]=$j; done
 
   for ((i = 1; i <= sl; i++)); do
     for ((j = 1; j <= tl; j++)); do
       local cost=1
       if [[ "${s:i-1:1}" == "${t:j-1:1}" ]]; then cost=0; fi
-      local del=$(( d[((i - 1) * (tl + 1)) + j] + 1 ))
-      local ins=$(( d[(i * (tl + 1)) + j - 1] + 1 ))
-      local sub=$(( d[((i - 1) * (tl + 1)) + j - 1] + cost ))
+      local del=$(( d[(i - 1) * (tl + 1) + j] + 1 ))
+      local ins=$(( d[i * (tl + 1) + j - 1] + 1 ))
+      local sub=$(( d[(i - 1) * (tl + 1) + j - 1] + cost ))
       local min=$del
       if ((ins < min)); then min=$ins; fi
       if ((sub < min)); then min=$sub; fi
-      d[$((i * (tl + 1) + j))]=$min
+      d[i * (tl + 1) + j]=$min
     done
   done
 
-  echo "${d[$((sl * (tl + 1) + tl))]}"
+  echo "${d[sl * (tl + 1) + tl]}"
 }
 
 closest_flag() {
