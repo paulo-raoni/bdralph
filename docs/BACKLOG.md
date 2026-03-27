@@ -74,10 +74,6 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
 - **BDRALPH_LOOP_MOCK=1 production guard** — add a warning banner or NODE_ENV-style
   guard to prevent mock mode from activating silently in production environments.
   Identified during M1b review (Finding 2, severity: low).
-- **devcontainer PATH / bdralph alias** — after `npm install`, `bdralph` is not available
-  directly in the devcontainer PATH (symlink in `node_modules/.bin/` is not created).
-  Current workaround: `bash bin/bdralph`. Resolve before or alongside the publishing
-  milestone — options: alias in `devcontainer.json`, setup script, or PATH fix.
 - **Test parallelism** — as the test suite scales (unit + E2E), CI gates
   will slow down. Two improvements to implement when gates start impacting
   the development cycle:
@@ -97,11 +93,3 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
   - Worker implementation parallelism — Claude Code CLI and Codex already
     parallelize independent tool calls natively; bdralph does not need to
     manage this.
-- **`RALPH_DIR` overridable via env var** — `RALPH_DIR` is currently hardcoded as
-  `$REPO_ROOT/artifacts/bdralph` in `ralph-loop.sh` with no way to override it.
-  This causes test files that use `artifacts/bdralph/` directly to share state
-  when run in parallel. Long-term fix: add
-  `RALPH_DIR="${BDRALPH_RALPH_DIR:-$REPO_ROOT/artifacts/bdralph}"` to the loop
-  so tests can isolate their artifact directories. The immediate workaround
-  (`fileParallelism: false` in vitest.config.ts) is in place and sufficient until
-  the test suite grows.

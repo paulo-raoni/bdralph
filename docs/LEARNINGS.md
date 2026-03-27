@@ -643,6 +643,16 @@ do merge.
 
 ---
 
+### L-INK-07 — Ink 5.x hijacks process.stdout — node-pty cannot capture panel output
+
+**What happened:** E2E Nível 2 attempted to verify real Ink panel content via `node-pty`. Even with a real PTY, the panel output was not captured. Investigation revealed that Ink 5.x intercepts `process.stdout` on import, redirecting all writes to its own render pipeline. Content written to `/dev/tty` via the `startPanel()` call bypasses the PTY master entirely.
+
+**Lesson:** Ink panel content cannot be verified through `node-pty` PTY capture. The correct approach splits testing into two layers: (1) unit tests on helper functions (`ralph-ink-helpers.ts`) and the React component in isolation, (2) E2E tests that verify the bash UI data pipeline (iteration, model, cost flow through state files) using `BDRALPH_NO_UI=1`. Layout and lifecycle tests (crash-free rendering, clean exit) can still use `node-pty` with Ink enabled — they only check exit code and absence of errors, not captured content.
+
+**Pattern adopted:** E2E Nível 2 content tests use `BDRALPH_NO_UI=1` (bash UI) to verify data pipeline. Layout/lifecycle tests use real Ink via PTY but assert absence of errors, not content. All tests skip when `/dev/tty` is unavailable.
+
+---
+
 ## 8. Design do sistema — decisões descartadas
 
 ### L-DESIGN-01 — Modo agnóstico: executor agnóstico, não provider agnóstico
