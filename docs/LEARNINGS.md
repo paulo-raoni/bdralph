@@ -697,3 +697,20 @@ resolves to the symlink's directory, and the relative path to `ralph-loop.sh` br
 **Lesson:** When a script needs its own real location (not the invocation path), use
 `readlink -f "$0"` before `dirname`: `SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"`.
 `readlink -f` follows the full symlink chain to the canonical path.
+
+---
+
+### L-DEV-02 — `npm link` installs to global prefix, not node_modules/.bin
+
+**What happened:** The first attempt to fix the devcontainer PATH (PR #26) added
+`/workspaces/bdralph/node_modules/.bin` to PATH, assuming npm would create a symlink
+there for the local package. It does not — npm only creates symlinks in
+`node_modules/.bin` for *dependencies*, not for the package itself. The binary remained
+unavailable as `bdralph`. The correct fix (PR #27) uses `npm link`, which installs the
+package to the global npm prefix (`/usr/local/share/npm-global/bin/` in this devcontainer)
+and creates the symlink there. `npm link` is idempotent and safe to run on every
+devcontainer rebuild.
+
+**Lesson:** To make a locally developed npm package available as a command, use
+`npm link` — not PATH manipulation to `node_modules/.bin`. The latter only works for
+dependencies, not for the package being developed.
