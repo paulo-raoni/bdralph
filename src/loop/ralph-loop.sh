@@ -10,8 +10,8 @@ set -euo pipefail
 
 LOOP_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$LOOP_DIR/../.." && pwd)"
-RALPH_DIR="$REPO_ROOT/artifacts/bdralph"
-LOGS_DIR="$REPO_ROOT/logs"
+RALPH_DIR="${BDRALPH_RALPH_DIR:-$REPO_ROOT/artifacts/bdralph}"
+LOGS_DIR="${BDRALPH_LOGS_DIR:-$REPO_ROOT/logs}"
 
 # Overridable for testing
 LLM_DELEGATE="${BDRALPH_LLM_DELEGATE:-$LOOP_DIR/llm-delegate.sh}"
