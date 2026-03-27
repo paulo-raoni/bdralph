@@ -27,9 +27,13 @@
 | fix: replace node_modules/.bin PATH hack with npm link | #27 | ✅ BUG-05: npm link replaces incorrect PATH manipulation in setup.sh. T-BUG01 updated to verify PATH via which. 82 tests passing. |
 | fix: resolve symlink + shellcheck warnings | #28 | ✅ BUG-06: readlink -f in bin/bdralph fixes SCRIPT_DIR when invoked via npm link symlink. Shellcheck lint gate now exits 0 (zero warnings). T-BUG06 added. L-BASH-11 documented. 83 tests passing. |
 | docs: complete README | #29 | ✅ README rewritten from scratch: table of contents, status, quick start, CLI reference, Mermaid diagrams (component map, pipeline, SHIP-ON-FAILURE, Second Mind), env vars, providers, project structure, runtime output, known issues. |
+| docs: PROGRESS + LEARNINGS — post manual testing | #30 | ✅ Added PRs #25–#29 to Completed table. Added manual testing session notes (T-MAN-01..04). Added L-DEV-02 to LEARNINGS. `npm run typecheck` ✅. |
+| fix(loop): BDRALPH_RALPH_DIR and BDRALPH_LOGS_DIR env overrides | #31 | ✅ `RALPH_DIR` and `LOGS_DIR` now read from `BDRALPH_RALPH_DIR` / `BDRALPH_LOGS_DIR` env vars with original values as defaults. Enables per-test tmpDir isolation. `npm test` ✅ (83), `npm run lint` ✅, `npm run typecheck` ✅. |
+| feat(e2e): E2E Nível 1 — headless mock loop tests | #32 | ✅ 10 E2E headless tests covering SHIP, BLOCKED, stop controls, Second Mind, L1 escalation, SHIP-ON-FAILURE, session cleanup, traces, cost guard. 3 spec corrections applied by executor. E2E-L1-08 confirmed stale-signal cleanup already exists. `npm test` ✅ (83), `npm run test:e2e:headless` ✅ (10), `npm run lint` ✅, `npm run typecheck` ✅. |
 
 ## Notes
 
 - Repo created and bootstrapped. devcontainer operational.
 - Factory frozen at M53 (50 tests passing). Factory PR marking M53 complete still pending — operator must do this before resuming factory work.
-- Manual testing session completed (partial): T-MAN-01 ✅, T-MAN-02 ✅ (SHIP in 2 iterations, $0.000362 reviewer cost), T-MAN-03 ❌ (Ink panel blocked by devcontainer /dev/tty), T-MAN-04 ⚠️ (stop signal timing inconclusive). Bugs found and fixed in PRs #26–#28.
+- Manual testing session completed (partial): T-MAN-01 ✅, T-MAN-02 ✅ (SHIP in 2 iterations, $0.000362 reviewer cost), T-MAN-03 ❌ (Ink panel blocked by devcontainer /dev/tty), T-MAN-04 ⚠️ (stop signal timing inconclusive — now covered by E2E-L1-03/04). Bugs found and fixed in PRs #26–#28.
+- E2E Nível 1 complete (PR #32). Stop controls, Second Mind threshold, L1 escalation, SHIP-ON-FAILURE, session cleanup, traces, and cost guard all covered by automated headless tests. `npm run test:e2e:headless` is now a mandatory gate for PRs touching `src/loop/`, `bin/bdralph`, or `tests/`.
