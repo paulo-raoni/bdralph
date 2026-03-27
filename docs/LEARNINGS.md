@@ -262,6 +262,29 @@ próximo contexto.
 
 ---
 
+### L-TEST-10 — E2E com mock worker e mock LLM: três spec corrections
+
+**O que aconteceu:** O prompt de implementação do E2E Nível 1 descrevia asserções baseadas em raciocínio teórico sobre o comportamento do loop. O executor verificou o código real e encontrou três incompatibilidades:
+1. Mock worker não escreve `work-summary.txt` — só o worker real (Claude Code) faz isso.
+2. `stop-after-this` com resultado REVISE termina com exit 1 (BLOCKED), não exit 0 — só SHIP produz exit 0.
+3. SHIP-ON-FAILURE com `--max > 1` dispara Second Mind na iteração de threshold, interferindo na sequência do mock LLM.
+
+**O que aprendemos:** Asserções de E2E devem ser derivadas da leitura do código-fonte, não de modelos mentais. O padrão correto: antes de escrever qualquer `expect()`, ler o trecho relevante do loop e rastrear o caminho de execução real. Quando o executor tem autonomia para corrigir especificações, ele deve documentar cada correção com comentário no código e no PR description.
+
+**Padrão adotado:** Seção "Autonomia do executor" em prompts de implementação E2E autoriza correções de spec com documentação obrigatória.
+
+---
+
+### L-TEST-11 — Isolamento de E2E por tmpDir elimina fileParallelism: false
+
+**O que aconteceu:** Testes unitários existentes em `tests/loop/` usam `fileParallelism: false` porque todos escrevem em `$REPO_ROOT/artifacts/bdralph/` — diretório compartilhado. E2E Nível 1 usa `BDRALPH_RALPH_DIR` e `BDRALPH_LOGS_DIR` para apontar cada teste para um `tmpDir` exclusivo criado no `beforeEach`.
+
+**O que aprendemos:** Isolamento via tmpDir é a solução correta para E2E paralelo. `fileParallelism: false` é um débito técnico aceitável para testes unitários legados, mas não deve ser herdado por novos testes E2E. Configs vitest separadas (`vitest.config.ts` vs `vitest.e2e.headless.config.ts`) permitem políticas diferentes por camada.
+
+**Padrão adotado:** E2E tests sempre usam tmpDir isolation. `vitest.e2e.headless.config.ts` tem `fileParallelism: true`. Testes unitários em `vitest.config.ts` mantêm `fileParallelism: false`.
+
+---
+
 ## 4. Loop e review pipeline
 
 ### L-LOOP-01 — Bloco de ancoragem é crítico para o worker não meta-raciocinar
@@ -445,6 +468,16 @@ sequências de mock matematicamente corretas para o número de layers × iteraç
 
 ---
 
+### L-PROMPT-12 — Sensitive paths não devem ser modificados dentro de prompts de implementação
+
+**O que aconteceu:** O prompt do E2E Nível 1 instruiu o executor a modificar `CLAUDE.md` (sensitive path — Section 8) como parte da implementação. O executor fez a modificação corretamente, mas o processo foi desviado: sensitive paths devem ser alterados via CLI direto após o merge, não dentro do escopo de um PR de implementação.
+
+**O que aprendemos:** Antes de incluir qualquer modificação de arquivo em um prompt de implementação, verificar se o arquivo está na lista de sensitive paths do `CLAUDE.md`. Se estiver, remover do prompt e planejar um prompt separado pós-merge para o executor executar via CLI.
+
+**Padrão adotado:** Checklist de sensitive paths revisado antes de finalizar qualquer prompt de implementação.
+
+---
+
 ## 6. Fluxo de PR e governança
 
 ### L-PR-01 — Branch sempre antes de commitar — nunca assumir que o executor vai criar
@@ -545,6 +578,16 @@ solução correta (adicionar o fix na branch ativa antes do merge) foi imediatam
 **O que aprendemos:** Quando um issue é descoberto antes do merge de uma branch, o fix
 vai na mesma branch/PR. Um PR separado só faz sentido se o issue for encontrado depois
 do merge.
+
+---
+
+### L-PR-13 — `vitest.e2e.config.ts` não deve ser modificado para novos modos E2E
+
+**O que aconteceu:** O design inicial do E2E Nível 1 previa modificar `vitest.e2e.config.ts` para adicionar `fileParallelism: true`. Durante a revisão, identificou-se que isso quebraria `E2E-01.test.ts`, que espera `BDRALPH_E2E_MODE=no-llm` ou `with-llm` e rejeitaria `headless-mock`.
+
+**O que aprendemos:** Cada modo E2E tem seu próprio config vitest. `vitest.e2e.config.ts` é o config do modo `no-llm`/`with-llm`. Novos modos recebem novos arquivos de config (`vitest.e2e.headless.config.ts`). O `include` pattern de cada config deve ser restrito ao seu escopo — nunca usar `tests/e2e/**` se isso pega arquivos de outros modos.
+
+**Padrão adotado:** Um config vitest por modo E2E. Include pattern sempre específico ao diretório do modo.
 
 ---
 

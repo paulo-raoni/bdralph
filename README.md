@@ -28,7 +28,7 @@ multi-layer review pipeline (L1-L4), operator controls, cost guard, and a termin
 
 The core loop (`NO_UI` mode) is functional and has been validated end-to-end.
 The Ink terminal panel is not usable in devcontainer environments (see Known Issues).
-Manual testing of stop controls and Second Mind is in progress.
+Stop controls, Second Mind threshold, L1 escalation, SHIP-ON-FAILURE, session cleanup, traces, and cost guard are covered by automated E2E headless tests (`npm run test:e2e:headless`).
 
 ## Prerequisites
 
@@ -289,8 +289,15 @@ tests/
   loop/                      <- loop script tests (mock delegate)
   panel/                     <- Ink panel tests (node-pty)
   providers/                 <- Gemini SDK tests
-  e2e/                       <- end-to-end test roteiros and edge cases
-  fixtures/                  <- mock binaries and delegates
+  e2e/
+    loop/                    <- E2E Nível 1: headless mock loop tests (10 tests)
+    helpers/                 <- shared helpers: loop-runner, signal-writer, file-waiter, trace-reader
+    roteiros/                <- manual E2E roteiros (not automated)
+    EDGE_CASES.md            <- known gaps and edge cases
+  fixtures/
+    mock-bin/                <- fast mock worker + mock git
+    mock-bin-slow/           <- slow mock worker (for stop-control timing tests)
+    mock-delegate/           <- mock LLM delegate (fixed response + sequence)
 
 artifacts/bdralph/           <- runtime state (gitignored)
 logs/                        <- runtime logs (gitignored)
@@ -342,13 +349,6 @@ issue above.
 
 Running `bdralph ask "question"` when no loop is running writes the signal file
 silently. The operator receives no indication that the message was not delivered.
-
-### Stop signal timing
-
-`bdralph stop` writes a signal file that the loop reads at the start of each iteration.
-If the signal is written before the loop starts, it will be read in the first iteration.
-The loop does not clear stale signals from previous sessions on startup (known gap -
-see BACKLOG).
 
 ### Second Mind threshold with small --max
 
