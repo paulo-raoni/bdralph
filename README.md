@@ -325,15 +325,17 @@ All files in `artifacts/` are gitignored and cleaned at session start.
 
 ### Ink panel not usable in devcontainer
 
-The default mode spawns an Ink terminal panel for real-time visibility. In devcontainer
-environments, `/dev/tty` exists but is not accessible (ENXIO), causing the Ink process
-to crash immediately.
+TTY (teletypewriter) is the device that connects a process to an interactive terminal display. The Ink panel needs direct access to `/dev/tty` to render its interface with positioned cursor, colors, and real-time updates.
+
+In devcontainer environments, `/dev/tty` exists in the filesystem but is not actually connected to a terminal (the underlying device returns ENXIO — "No such device or address" — when opened). The Ink process crashes immediately on startup.
 
 **Workaround:** use `BDRALPH_NO_UI=1` in devcontainer environments.
 
 ```bash
 BDRALPH_NO_UI=1 bdralph "your task" --max 5
 ```
+
+The loop runs fully in this mode — all features work. The only difference is output: instead of the Ink panel, bdralph prints iteration progress and results as plain text.
 
 ### Worker iterations are slow
 
