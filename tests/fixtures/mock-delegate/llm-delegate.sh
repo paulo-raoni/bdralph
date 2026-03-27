@@ -2,6 +2,10 @@
 # Mock LLM delegate — returns MOCK_LLM_RESPONSE (default: PASS).
 # Writes minimal usage JSON to /tmp/llm_delegate_usage.json.
 RESPONSE="${MOCK_LLM_RESPONSE:-PASS}"
+if [ -n "${MOCK_LLM_LOG_PROMPT:-}" ]; then
+  echo "--- DELEGATE CALL ---" >> "$MOCK_LLM_LOG_PROMPT"
+  echo "$2" >> "$MOCK_LLM_LOG_PROMPT"
+fi
 echo "$RESPONSE"
 if [ -n "${MOCK_LLM_CLASSIFICATION:-}" ]; then
   echo "CLASSIFICATION: ${MOCK_LLM_CLASSIFICATION}"

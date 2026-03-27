@@ -172,12 +172,17 @@ function Panel({
 // ---------------------------------------------------------------------------
 
 export function startPanel(prefix: string, budget: string, ralphDir: string): Instance {
-  const ttyFd = openSync("/dev/tty", "w");
-  const ttyStream = createWriteStream("/dev/tty", { fd: ttyFd });
+  try {
+    const ttyFd = openSync("/dev/tty", "w");
+    const stdout = createWriteStream("/dev/tty", { fd: ttyFd }) as unknown as NodeJS.WriteStream;
 
-  return render(<Panel prefix={prefix} budget={budget} ralphDir={ralphDir} />, {
-    stdout: ttyStream as unknown as NodeJS.WriteStream,
-    patchConsole: false,
-    exitOnCtrlC: false,
-  });
+    return render(<Panel prefix={prefix} budget={budget} ralphDir={ralphDir} />, {
+      stdout,
+      patchConsole: false,
+      exitOnCtrlC: false,
+    });
+  } catch (err) {
+    process.stderr.write("[bdralph] /dev/tty not accessible — Ink panel cannot start\n");
+    throw err;
+  }
 }

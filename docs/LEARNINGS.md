@@ -643,3 +643,44 @@ do merge.
 **O que aprendemos:** `DECISIONS.md` como índice leve (uma linha por decisão + link), `docs/decisions/MN.md` como detalhe por milestone. Executor lê o índice sempre, lê o detalhe só quando relevante. Mesmo princípio de um RAG — não joga o corpus inteiro no contexto.
 
 **Padrão adotado no bdralph:** Implementado desde M0.
+
+---
+
+## 7. Bash and shell
+
+### L-BASH-10 — `[ -r /dev/tty ]` passes even when the device is not openable
+
+**What happened:** The devcontainer has `/dev/tty` in the filesystem with read/write
+permission bits set. `[ -r /dev/tty ]` returns true. But the actual `open()` syscall
+fails with ENXIO because the underlying device is not attached to a terminal. The Ink
+process was spawned, tried to open `/dev/tty`, and crashed with a Node.js stack trace.
+
+**Lesson:** Shell permission tests (`-r`, `-w`) check inode metadata, not device
+accessibility. For device files, use a real open attempt: `(exec 3>/dev/tty) 2>/dev/null`.
+
+---
+
+### L-LOOP-09 — `git diff HEAD` misses committed worker changes
+
+**What happened:** The L2 context was built with `git diff HEAD` — the diff between the
+working tree and the last commit. The Claude Code worker commits its changes as part of
+its execution. By the time L2 runs, the working tree is clean and the diff is empty. L2
+saw "No file changes detected" and emitted a false FAIL, causing an unnecessary extra
+iteration.
+
+**Lesson:** For branch-based review, use `git diff main...HEAD` (three-dot diff) to
+capture all changes committed on the branch since it diverged from main. `git diff HEAD`
+is only correct when changes are expected to be uncommitted.
+
+---
+
+### L-DEV-01 — `node_modules/.bin` not in devcontainer PATH by default
+
+**What happened:** After `npm install`, the `bdralph` binary is symlinked at
+`node_modules/.bin/bdralph`. The devcontainer `setup.sh` adds `~/.local/bin` to PATH
+but not `node_modules/.bin`. Running `bdralph` directly fails with `command not found`.
+The workaround was `bash bin/bdralph`, which is not the documented interface.
+
+**Lesson:** Add `node_modules/.bin` to PATH explicitly in `setup.sh` and in `.bashrc`
+when the project relies on locally installed binaries. Do not assume `npx` is an
+acceptable substitute for PATH availability during interactive use.

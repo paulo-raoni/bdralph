@@ -132,6 +132,8 @@ All edge cases are `not implemented` until the corresponding milestone ships.
 | PANEL-04 | BDRALPH_NO_UI=1 — Ink panel does not render | automated (PANEL-04) |
 | PANEL-05 | Panel frames do not stack — single render frame visible at a time | not implemented |
 | PANEL-06 | Panel cleans up terminal on SIGTERM — cursor restored, screen cleared | not implemented |
+| PANEL-07 | `/dev/tty` exists but ENXIO — loop falls back to bash UI without crashing | automated (PANEL-05 — proxy via NO_UI) |
+| T-INK-CONTENT | T-INK-CONTENT-01..03 run with BDRALPH_LOOP_MOCK=1 — output comes from mock, not real Ink renderer. Real Ink content verification requires a real PTY and is better suited for manual/E2E testing. | mock only (known limitation) |
 
 ---
 
