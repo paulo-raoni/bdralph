@@ -1,0 +1,7 @@
+#!/bin/bash
+# Mock git — returns empty results for diff/ls-files so L1 sees clean state.
+# Passes through other commands to real git.
+case "$1" in
+  diff|ls-files) exit 0 ;;
+  *) exec /usr/bin/git "$@" ;;
+esac

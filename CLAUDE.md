@@ -139,6 +139,7 @@ npm run typecheck
 |---|---|
 | Code changes (`.ts`, `.js`, `.py`) | `npm test` + `npm run typecheck` |
 | Code changes (`.sh`) | `npm test` + `npm run lint` + `npm run typecheck` |
+| Changes in `src/loop/`, `bin/bdralph`, `tests/` | `npm test` + `npm run test:e2e:headless` + `npm run lint` + `npm run typecheck` |
 | Config changes (`.json`, `.gitignore`, `vitest.*.config.ts`) | `npm run typecheck` |
 | Documentation only (`.md` files, `docs/`) | none |
 

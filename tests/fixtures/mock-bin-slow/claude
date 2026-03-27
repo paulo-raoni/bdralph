@@ -1,0 +1,9 @@
+#!/bin/bash
+# Mock worker (slow) — sleeps before returning, to give stop-signal tests time to write signals.
+# MOCK_CLAUDE_SLEEP_SECONDS controls sleep duration (default: 3).
+SLEEP="${MOCK_CLAUDE_SLEEP_SECONDS:-3}"
+sleep "$SLEEP"
+if [ -n "${BDRALPH_MOCK_STDOUT_CONTENT:-}" ]; then
+  echo "${BDRALPH_MOCK_STDOUT_CONTENT}"
+fi
+exit 0
