@@ -189,7 +189,7 @@ UI_STATE_ENABLED="$UI_ENABLED"
 # Suppresses bash Phase 1 UI and starts the ink renderer instead.
 RALPH_INK_ACTIVE=false
 INK_RENDERER_PID=""
-if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
+if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
   RALPH_INK_ACTIVE=true
   UI_STATE_ENABLED=true
   UI_ENABLED=false
@@ -1341,8 +1341,9 @@ $l4_feedback"
 
   # --- L2 enriched context (M5) ---
   local l2_git_diff=""
-  l2_git_diff=$(git -C "$REPO_ROOT" diff HEAD 2>/dev/null | tail -200 || true)
-  [ -z "$l2_git_diff" ] && l2_git_diff="No file changes detected in working tree."
+  l2_git_diff=$(git -C "$REPO_ROOT" diff main...HEAD 2>/dev/null | tail -200 || \
+                git -C "$REPO_ROOT" diff master...HEAD 2>/dev/null | tail -200 || true)
+  [ -z "$l2_git_diff" ] && l2_git_diff="No file changes detected between branch and base."
 
   local l2_l1_trace=""
   local _l1_trace_file="$RALPH_DIR/traces/l1-iteration-${iteration}.json"

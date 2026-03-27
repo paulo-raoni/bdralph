@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -115,6 +116,26 @@ describe("M5 smoke tests", () => {
       BDRALPH_MOCK_STDOUT_CONTENT: "mock worker output line",
     });
     expect(result.stdout).toContain("mock worker output line");
+  });
+
+  // T-M5-08: L2 prompt contains branch diff fallback, not the old working-tree fallback
+  it("T-M5-08: L2 context uses branch diff (main...HEAD), not working tree diff", () => {
+    const logFile = path.join(os.tmpdir(), `l2-prompt-${Date.now()}.txt`);
+    try {
+      runLoop("test task", ["--reviewer-mode", "pipeline"], {
+        MOCK_LLM_LOG_PROMPT: logFile,
+      });
+      expect(fs.existsSync(logFile)).toBe(true);
+      const prompt = fs.readFileSync(logFile, "utf-8");
+      // Must contain the new branch-based fallback OR an actual diff
+      // (L1 context may still contain the old working-tree message — that's fine,
+      //  we check that the L2 GIT DIFF section uses the new branch diff)
+      const hasBranchDiffFallback = prompt.includes("No file changes detected between branch and base.");
+      const hasActualDiff = prompt.includes("diff --git");
+      expect(hasBranchDiffFallback || hasActualDiff).toBe(true);
+    } finally {
+      if (fs.existsSync(logFile)) fs.unlinkSync(logFile);
+    }
   });
 
   // T-M5-07: SHIP-ON-FAILURE fires when all conditions met

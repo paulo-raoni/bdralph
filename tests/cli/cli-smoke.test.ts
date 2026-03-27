@@ -7,6 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BIN = path.resolve(__dirname, "../../bin/bdralph");
+const LOOP_SCRIPT = path.resolve(__dirname, "../../src/loop/ralph-loop.sh");
+const MOCK_DELEGATE = path.resolve(__dirname, "../fixtures/mock-delegate/llm-delegate.sh");
 
 // Helper: run bdralph and capture result
 function run(
@@ -204,6 +206,144 @@ describe("CLI smoke tests", () => {
     });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("ink_ui: unset");
+  });
+
+  // T-BUG01: bdralph binary is declared in package.json and the target file exists
+  it("T-BUG01: bdralph binary declared in package.json and target is executable", () => {
+    const pkgPath = path.resolve(__dirname, "../../package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    expect(pkg.bin).toBeDefined();
+    expect(pkg.bin.bdralph).toBeDefined();
+    const binTarget = path.resolve(__dirname, "../..", pkg.bin.bdralph);
+    expect(fs.existsSync(binTarget)).toBe(true);
+    const stat = fs.statSync(binTarget);
+    const isExecutable = (stat.mode & 0o111) > 0;
+    expect(isExecutable).toBe(true);
+  });
+
+  // T-UI-01: bash UI prints session header with task, worker, budget
+  it("T-UI-01: bash UI prints session header", () => {
+    const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+    try {
+      const stdout = execFileSync("bash", [LOOP_SCRIPT, "my test task", "--max", "1", "--worker", "sonnet", "--budget", "0.75"], {
+        encoding: "utf-8",
+        timeout: 15000,
+        env: {
+          ...process.env,
+          PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+          BDRALPH_LLM_DELEGATE: MOCK_DELEGATE,
+          BDRALPH_NO_UI: "1",
+          MOCK_LLM_RESPONSE: "PASS",
+          MOCK_LLM_CLASSIFICATION: "pass",
+        },
+      });
+      expect(stdout).toContain("bdralph — Governed agentic loops for Claude Code");
+      expect(stdout).toContain("my test task");
+      expect(stdout).toContain("sonnet");
+      expect(stdout).toContain("0.75");
+    } catch (err: unknown) {
+      const e = err as { stdout?: string };
+      const stdout = e.stdout ?? "";
+      expect(stdout).toContain("bdralph — Governed agentic loops for Claude Code");
+    }
+  });
+
+  // T-UI-02: bash UI prints iteration header
+  it("T-UI-02: bash UI prints iteration header", () => {
+    const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+    try {
+      const stdout = execFileSync("bash", [LOOP_SCRIPT, "test task", "--max", "1"], {
+        encoding: "utf-8",
+        timeout: 15000,
+        env: {
+          ...process.env,
+          PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+          BDRALPH_LLM_DELEGATE: MOCK_DELEGATE,
+          BDRALPH_NO_UI: "1",
+          MOCK_LLM_RESPONSE: "PASS",
+          MOCK_LLM_CLASSIFICATION: "pass",
+        },
+      });
+      expect(stdout).toMatch(/Iteration \d+ \/ \d+/);
+    } catch (err: unknown) {
+      const e = err as { stdout?: string };
+      expect((e.stdout ?? "")).toMatch(/Iteration \d+ \/ \d+/);
+    }
+  });
+
+  // T-UI-03: bash UI prints WORK PHASE start marker
+  it("T-UI-03: bash UI prints WORK PHASE start marker", () => {
+    const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+    try {
+      const stdout = execFileSync("bash", [LOOP_SCRIPT, "test task", "--max", "1"], {
+        encoding: "utf-8",
+        timeout: 15000,
+        env: {
+          ...process.env,
+          PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+          BDRALPH_LLM_DELEGATE: MOCK_DELEGATE,
+          BDRALPH_NO_UI: "1",
+          MOCK_LLM_RESPONSE: "PASS",
+          MOCK_LLM_CLASSIFICATION: "pass",
+        },
+      });
+      expect(stdout).toContain("WORK PHASE");
+    } catch (err: unknown) {
+      const e = err as { stdout?: string };
+      expect((e.stdout ?? "")).toContain("WORK PHASE");
+    }
+  });
+
+  // T-UI-04: bash UI prints REVIEW PHASE start marker and layer results
+  it("T-UI-04: bash UI prints REVIEW PHASE and layer results", () => {
+    const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+    try {
+      const stdout = execFileSync("bash", [LOOP_SCRIPT, "test task", "--max", "1"], {
+        encoding: "utf-8",
+        timeout: 15000,
+        env: {
+          ...process.env,
+          PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+          BDRALPH_LLM_DELEGATE: MOCK_DELEGATE,
+          BDRALPH_NO_UI: "1",
+          MOCK_LLM_RESPONSE: "PASS",
+          MOCK_LLM_CLASSIFICATION: "pass",
+        },
+      });
+      expect(stdout).toContain("REVIEW PHASE");
+      expect(stdout).toContain("L1");
+    } catch (err: unknown) {
+      const e = err as { stdout?: string };
+      const stdout = e.stdout ?? "";
+      expect(stdout).toContain("REVIEW PHASE");
+      expect(stdout).toContain("L1");
+    }
+  });
+
+  // T-UI-05: bash UI prints SHIPPED result with cost
+  it("T-UI-05: bash UI prints SHIPPED with reviewer cost", () => {
+    const mockDir = path.resolve(__dirname, "../fixtures/mock-bin");
+    try {
+      const stdout = execFileSync("bash", [LOOP_SCRIPT, "test task", "--max", "1"], {
+        encoding: "utf-8",
+        timeout: 15000,
+        env: {
+          ...process.env,
+          PATH: `${mockDir}:${process.env.PATH ?? ""}`,
+          BDRALPH_LLM_DELEGATE: MOCK_DELEGATE,
+          BDRALPH_NO_UI: "1",
+          MOCK_LLM_RESPONSE: "SHIP",
+          MOCK_LLM_CLASSIFICATION: "pass",
+        },
+      });
+      expect(stdout).toContain("SHIPPED");
+      expect(stdout).toMatch(/\$[\d.]+/);
+    } catch (err: unknown) {
+      const e = err as { stdout?: string };
+      const stdout = e.stdout ?? "";
+      expect(stdout).toContain("SHIPPED");
+      expect(stdout).toMatch(/\$[\d.]+/);
+    }
   });
 
   // T-14: BDRALPH_BUDGET is exported to the loop

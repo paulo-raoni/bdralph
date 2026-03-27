@@ -172,11 +172,16 @@ function Panel({
 // ---------------------------------------------------------------------------
 
 export function startPanel(prefix: string, budget: string, ralphDir: string): Instance {
-  const ttyFd = openSync("/dev/tty", "w");
-  const ttyStream = createWriteStream("/dev/tty", { fd: ttyFd });
+  let stdout: NodeJS.WriteStream = process.stdout;
+  try {
+    const ttyFd = openSync("/dev/tty", "w");
+    stdout = createWriteStream("/dev/tty", { fd: ttyFd }) as unknown as NodeJS.WriteStream;
+  } catch {
+    // /dev/tty not accessible (e.g. devcontainer headless) — fall back to process.stdout
+  }
 
   return render(<Panel prefix={prefix} budget={budget} ralphDir={ralphDir} />, {
-    stdout: ttyStream as unknown as NodeJS.WriteStream,
+    stdout,
     patchConsole: false,
     exitOnCtrlC: false,
   });
