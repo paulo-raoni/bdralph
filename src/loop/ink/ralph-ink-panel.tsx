@@ -171,13 +171,20 @@ function Panel({
 // Main entry — called from ralph-ink.ts
 // ---------------------------------------------------------------------------
 
-export function startPanel(prefix: string, budget: string, ralphDir: string): Instance {
+export function startPanel(
+  prefix: string,
+  budget: string,
+  ralphDir: string,
+  stdout?: NodeJS.WriteStream,
+): Instance {
   try {
-    const ttyFd = openSync("/dev/tty", "w");
-    const stdout = createWriteStream("/dev/tty", { fd: ttyFd }) as unknown as NodeJS.WriteStream;
+    const output = stdout ?? (() => {
+      const ttyFd = openSync("/dev/tty", "w");
+      return createWriteStream("/dev/tty", { fd: ttyFd }) as unknown as NodeJS.WriteStream;
+    })();
 
     return render(<Panel prefix={prefix} budget={budget} ralphDir={ralphDir} />, {
-      stdout,
+      stdout: output,
       patchConsole: false,
       exitOnCtrlC: false,
     });

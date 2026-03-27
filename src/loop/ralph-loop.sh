@@ -188,14 +188,25 @@ UI_STATE_ENABLED="$UI_ENABLED"
 # --- ink renderer ---
 # BDRALPH_INK_UI=1 is set when the Ink renderer is active.
 # Suppresses bash Phase 1 UI and starts the ink renderer instead.
+# When BDRALPH_INK_CAPTURE_FILE is set, Ink writes to that file instead of /dev/tty,
+# allowing content capture in environments where /dev/tty is unavailable (e.g. E2E tests).
 RALPH_INK_ACTIVE=false
 INK_RENDERER_PID=""
+INK_HAS_TTY=false
 if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
+  INK_HAS_TTY=true
+fi
+
+if [ "$INK_HAS_TTY" = "true" ] || { [ -n "${BDRALPH_INK_CAPTURE_FILE:-}" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; }; then
   RALPH_INK_ACTIVE=true
   UI_STATE_ENABLED=true
   UI_ENABLED=false
   export BDRALPH_RALPH_DIR="$RALPH_DIR"
-  setsid npx --prefix "$LOOP_DIR" tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+  if [ "$INK_HAS_TTY" = "true" ]; then
+    setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" </dev/tty >/dev/tty 2>/dev/tty &
+  else
+    setsid node --import tsx "$LOOP_DIR/ink/ralph-ink.ts" "$UI_STATE_PREFIX" 2>/dev/null &
+  fi
   INK_RENDERER_PID=$!
 fi
 

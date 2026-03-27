@@ -71,6 +71,18 @@ Future ideas and deferred scope. Nothing here is committed until the operator ex
 - **License** — decide before publishing (blocks npm package name decision: `bdralph` vs `bd-ralph`)
 - **npm package name** — `bdralph` vs `bd-ralph` — decide when publishing milestone is adopted
 - **Mascot** — post-mature project, out of critical path
+- **Windows compatibility (MINGW64 / Git Bash)** — bdralph currently does not
+  run on Windows. Root causes:
+  (1) Hardcoded `/tmp/` in 5 files (`cost-guard.sh`, `llm-delegate.sh`,
+  `ralph-loop.sh`, `gemini.ts`, `ralph-loop.sh` UI state prefix). Fix: replace
+  all `/tmp/` with `${TMPDIR:-/tmp}` and use `mktemp -d` for session dirs.
+  (2) `npx tsx` hangs on `import("ink")` due to tsx CJS/ESM mode conflict with
+  yoga-layout's top-level await. Fix already applied in PR #feat/ink-stream-capture:
+  `node --import tsx` instead of `npx tsx`.
+  (3) Potential further issues with bash-isms, path separators, `/dev/tty`,
+  and `setsid` on Windows — needs comprehensive testing.
+  Identified during Ink stream capture work (2026-03-27). The `/tmp/` fix alone
+  (~50 references across 5 files) would likely unblock basic loop execution.
 - **BDRALPH_LOOP_MOCK=1 production guard** — add a warning banner or NODE_ENV-style
   guard to prevent mock mode from activating silently in production environments.
   Identified during M1b review (Finding 2, severity: low).
