@@ -109,6 +109,8 @@ body { background: #0d1117; font-family: 'Courier New', monospace; color: #e6edf
 .sm-msgs { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .sm-msg { font-size: 13px; line-height: 1.6; color: #c9d1d9; background: #1f6feb0a; border: 1px solid #1f6feb1a; border-radius: 5px; padding: 8px 10px; }
 .sm-msg .trigger { font-size: 11px; color: #484f58; margin-bottom: 4px; }
+.sm-thinking { font-size: 13px; color: #58a6ff; font-style: italic; padding: 8px 0; animation: sm-pulse 1.4s ease-in-out infinite; }
+@keyframes sm-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 .ask-area { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; flex-shrink: 0; }
 .ask-label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
 textarea.ask-ta { background: #0d1117; border: 1px solid #30363d; border-radius: 5px; color: #e6edf3; font-size: 14px; font-family: 'Courier New', monospace; padding: 9px 10px; resize: none; min-height: 86px; line-height: 1.6; width: 100%; outline: none; }
@@ -343,6 +345,9 @@ function sendAsk() {
   const btn = document.querySelector('.btn-ask');
   btn.textContent = '\u27F3 thinking...';
   btn.disabled = true;
+  var smEl = document.getElementById('smMessages');
+  smEl.innerHTML = '<div class="sm-thinking">&#x27F3; Second Mind is thinking\u2026</div>';
+  document.getElementById('smCount').textContent = 'thinking\u2026';
   ta.value = '';
   fetch('/ask', { method: 'POST', body: text }).then(() => {
     btn.textContent = 'sent \u2713';
@@ -522,7 +527,11 @@ function updateDashboard(state) {
   const smEl = document.getElementById('smMessages');
   if (state.secondMind && state.secondMind.length > 0) {
     smEl.innerHTML = state.secondMind.map(function(msg) {
-      return '<div class="sm-msg"><div class="trigger">' + esc(msg.trigger) + '</div>' + esc(msg.text) + '</div>';
+      var isUnavailable = msg.text && (msg.text.indexOf('ANTHROPIC_API_KEY not set') !== -1 || msg.text.indexOf('unavailable') !== -1);
+      var bodyHtml = isUnavailable
+        ? '<span style="color:#e3b341">&#x26A0; ' + esc(msg.text) + '</span>'
+        : esc(msg.text);
+      return '<div class="sm-msg"><div class="trigger">' + esc(msg.trigger) + '</div>' + bodyHtml + '</div>';
     }).join('');
     document.getElementById('smCount').textContent = state.secondMind.length + ' response' + (state.secondMind.length !== 1 ? 's' : '');
   } else {
