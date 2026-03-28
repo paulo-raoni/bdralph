@@ -224,7 +224,25 @@ fi
 WEB_SERVER_PID=""
 if [ "${BDRALPH_WEB_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; then
   BDRALPH_WEB_PORT="${BDRALPH_WEB_PORT:-7340}"
+  # Load ANTHROPIC_API_KEY from .env if not already in environment
+  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    _REPO_ROOT="$(cd "$LOOP_DIR/../.." && pwd)"
+    for _env_file in "$_REPO_ROOT/.env" "$HOME/.anthropic/env" "$HOME/.env"; do
+      if [ -f "$_env_file" ]; then
+        _key_val=$(grep '^ANTHROPIC_API_KEY=' "$_env_file" 2>/dev/null | head -1 | cut -d= -f2-)
+        _key_val="${_key_val#\'}" ; _key_val="${_key_val%\'}"
+        _key_val="${_key_val#\"}" ; _key_val="${_key_val%\"}"
+        if [ -n "$_key_val" ]; then
+          ANTHROPIC_API_KEY="$_key_val"
+          break
+        fi
+      fi
+    done
+  fi
   export ANTHROPIC_API_KEY
+  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    echo "[bdralph] WARNING: ANTHROPIC_API_KEY not set — Second Mind will be unavailable" >&2
+  fi
   node --import tsx "$LOOP_DIR/../web/server.ts" \
     --ralph-dir "$RALPH_DIR" \
     --port "$BDRALPH_WEB_PORT" \
