@@ -227,7 +227,7 @@ if [ "${BDRALPH_WEB_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; then
   # Load ANTHROPIC_API_KEY from .env if not already in environment
   if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
     _REPO_ROOT="$(cd "$LOOP_DIR/../.." && pwd)"
-    for _env_file in "$_REPO_ROOT/.env" "$HOME/.anthropic/env" "$HOME/.env"; do
+    for _env_file in "$_REPO_ROOT/.devcontainer/.env" "$_REPO_ROOT/.env" "$HOME/.anthropic/env" "$HOME/.env"; do
       if [ -f "$_env_file" ]; then
         _key_val=$(grep '^ANTHROPIC_API_KEY=' "$_env_file" 2>/dev/null | head -1 | cut -d= -f2-)
         _key_val="${_key_val#\'}" ; _key_val="${_key_val%\'}"
@@ -829,7 +829,8 @@ ui_cleanup() {
 
   if [ -n "${WEB_SERVER_PID:-}" ]; then
     # Give the server time to poll and push final terminal state to SSE clients
-    sleep 1
+    # (terminal poll runs every 2s — wait long enough for at least one cycle)
+    sleep 3
     kill "$WEB_SERVER_PID" 2>/dev/null || true
     wait "$WEB_SERVER_PID" 2>/dev/null || true
   fi
@@ -2273,7 +2274,7 @@ fi
 
 # --- web server cleanup ---
 if [ -n "${WEB_SERVER_PID:-}" ]; then
-  sleep 1
+  sleep 3
   kill "$WEB_SERVER_PID" 2>/dev/null || true
   wait "$WEB_SERVER_PID" 2>/dev/null || true
 fi

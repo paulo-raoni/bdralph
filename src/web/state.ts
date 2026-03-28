@@ -149,7 +149,8 @@ function mapTraceResult(
 
 export function buildPipeline(
   ralphDir: string,
-  iteration: number
+  iteration: number,
+  overallStatus?: DashboardState["status"]
 ): PipelineLayer[] {
   const layers: ("L1" | "L2" | "L3" | "L4")[] = ["L1", "L2", "L3", "L4"];
   const traces: (TraceFile | null)[] = layers.map((l) =>
@@ -160,6 +161,16 @@ export function buildPipeline(
   const l1Trace = traces[0];
   const l1Escalated = l1Trace?.escalated_to_l4 === true;
 
+  // When the loop has reached a terminal state, read the review result
+  // so we can override layers that have no trace file yet.
+  const isTerminal =
+    overallStatus === "shipped" ||
+    overallStatus === "blocked" ||
+    overallStatus === "stopped";
+  const reviewResult = isTerminal
+    ? safeReadFile(path.join(ralphDir, "review-result.txt")).toUpperCase()
+    : "";
+
   const pipeline: PipelineLayer[] = [];
   let foundActive = false;
 
@@ -169,11 +180,20 @@ export function buildPipeline(
     const layerKey = layerName.toLowerCase();
 
     let state: PipelineLayer["state"];
+    let result: string | undefined = trace?.result;
 
     if (trace) {
       state = mapTraceResult(trace.result);
     } else if (l1Escalated && (layerKey === "l2" || layerKey === "l3")) {
       state = "skip";
+    } else if (isTerminal && !trace) {
+      // Terminal state but no trace for this layer — derive from review result
+      if (layerKey === "l4" && reviewResult) {
+        state = mapTraceResult(reviewResult);
+        result = reviewResult;
+      } else {
+        state = "done";
+      }
     } else if (!foundActive) {
       // No trace — determine if this is the active layer.
       // A layer is active if all prior non-skipped layers are resolved.
@@ -202,7 +222,7 @@ export function buildPipeline(
     pipeline.push({
       layer: layerName,
       state,
-      result: trace?.result,
+      result,
       provider: trace?.provider ?? undefined,
       costUsd: trace?.cost_usd,
     });
@@ -432,7 +452,7 @@ export function buildDashboardState(
   if (bannerMsg) alerts.push(bannerMsg);
 
   // Pipeline
-  const pipeline = iteration > 0 ? buildPipeline(ralphDir, iteration) : [
+  const pipeline = iteration > 0 ? buildPipeline(ralphDir, iteration, status) : [
     { layer: "L1" as const, state: "wait" as const },
     { layer: "L2" as const, state: "wait" as const },
     { layer: "L3" as const, state: "wait" as const },
