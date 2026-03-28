@@ -406,7 +406,8 @@ export function buildDashboardState(
   let reviewerCost: number;
   let budgetUsd: number;
 
-  if (uiCostStr) {
+  if (uiCostStr !== "") {
+    // UI state has an explicit cost value (even "0") — trust it for this session
     reviewerCost = parseFloat(uiCostStr) || 0;
     const costGuard = readCostFromGuard();
     budgetUsd = costGuard.budgetUsd;
@@ -414,12 +415,11 @@ export function buildDashboardState(
     const costGuard = readCostFromGuard();
     reviewerCost = costGuard.reviewerCost;
     budgetUsd = costGuard.budgetUsd;
-  }
-
-  // If we still have no budget, try from reports
-  if (reviewerCost === 0) {
-    const fromReports = readCostFromReports(logsDir);
-    if (fromReports > 0) reviewerCost = fromReports;
+    // Only fall back to reports when no UI state is available (non-UI mode)
+    if (reviewerCost === 0) {
+      const fromReports = readCostFromReports(logsDir);
+      if (fromReports > 0) reviewerCost = fromReports;
+    }
   }
 
   // Elapsed
