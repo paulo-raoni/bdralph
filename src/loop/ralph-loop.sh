@@ -224,6 +224,7 @@ fi
 WEB_SERVER_PID=""
 if [ "${BDRALPH_WEB_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; then
   BDRALPH_WEB_PORT="${BDRALPH_WEB_PORT:-7340}"
+  export ANTHROPIC_API_KEY
   node --import tsx "$LOOP_DIR/../web/server.ts" \
     --ralph-dir "$RALPH_DIR" \
     --port "$BDRALPH_WEB_PORT" \
