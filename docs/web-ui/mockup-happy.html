@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>bdralph — Web UI Mockup (Happy Path)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; font-family: 'Courier New', monospace; color: #e6edf3; padding: 16px; }
+.header { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; }
+.header-top { padding: 10px 16px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px 8px 0 0; overflow: hidden; }
+.header-bottom { padding: 6px 16px; display: flex; align-items: center; gap: 8px; position: relative; overflow: visible; }
+.logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-text { color: #58a6ff; font-size: 22px; font-weight: bold; letter-spacing: 1px; line-height: 1; }
+.logo-sub { font-size: 9px; color: #484f58; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+.header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.sbtn { padding: 4px 12px; border-radius: 4px; font-size: 11px; font-family: 'Courier New', monospace; cursor: pointer; border: 1px solid; position: relative; white-space: nowrap; }
+.sbtn:hover .stip { display: block; }
+.sbtn-after { background: #d2992211; border-color: #d29922; color: #e3b341; }
+.sbtn-now { background: #da363322; border-color: #f85149; color: #f85149; }
+.stip { display: none; position: absolute; bottom: calc(100% + 6px); right: 0; background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; font-size: 10px; color: #c9d1d9; white-space: nowrap; z-index: 200; font-family: sans-serif; pointer-events: none; line-height: 1.5; }
+.stip::after { content: ''; position: absolute; top: 100%; right: 12px; border: 5px solid transparent; border-top-color: #30363d; }
+.btn-help { background: transparent; border: 1px solid #30363d; color: #8b949e; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif; flex-shrink: 0; }
+.btn-help:hover, .btn-help.active { border-color: #58a6ff; color: #58a6ff; }
+.badge-run { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; font-size: 9px; padding: 2px 7px; border-radius: 3px; flex-shrink: 0; }
+.task-wrap { position: relative; min-width: 0; flex: 1; }
+.task-label { font-size: 11px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; display: block; }
+.task-wrap:hover .ttip { display: block; }
+.ttip { display: none; position: absolute; top: calc(100% + 5px); left: 0; background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; font-size: 10px; color: #c9d1d9; white-space: nowrap; z-index: 200; font-family: sans-serif; pointer-events: none; max-width: 500px; }
+.ttip::before { content: ''; position: absolute; bottom: 100%; left: 12px; border: 5px solid transparent; border-bottom-color: #30363d; }
+.help-panel { overflow: hidden; max-height: 0; transition: max-height .35s ease, margin .35s ease; margin-bottom: 0; }
+.help-panel.open { max-height: 700px; margin-bottom: 10px; }
+.help-inner { background: #161b22; border: 1px solid #1f6feb44; border-radius: 8px; overflow: hidden; }
+.help-header { padding: 8px 16px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.help-tabs { display: flex; }
+.htab { padding: 6px 16px; font-size: 10px; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; font-family: sans-serif; text-transform: uppercase; letter-spacing: .5px; background: none; border-top: none; border-left: none; border-right: none; }
+.htab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.btn-close { background: transparent; border: 1px solid #30363d; color: #8b949e; width: 22px; height: 22px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif; line-height: 1; }
+.btn-close:hover { border-color: #f85149; color: #f85149; }
+.help-body { padding: 14px 16px; max-height: 560px; overflow-y: auto; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.legend-item { display: flex; gap: 10px; align-items: flex-start; }
+.legend-badge { flex-shrink: 0; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 1px; white-space: nowrap; }
+.lb-g { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.lb-b { background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+.lb-gr { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.lb-a { background: #d2992211; border: 1px solid #d29922; color: #e3b341; }
+.lb-r { background: #da363322; border: 1px solid #da3633; color: #f85149; }
+.legend-text { font-size: 11px; color: #8b949e; font-family: sans-serif; line-height: 1.5; }
+.legend-text strong { color: #c9d1d9; font-weight: 500; }
+.readme-body { font-size: 11px; color: #8b949e; font-family: sans-serif; line-height: 1.7; }
+.readme-body h3 { font-size: 12px; color: #c9d1d9; font-weight: 500; margin: 14px 0 6px; }
+.readme-body h3:first-child { margin-top: 0; }
+.readme-body code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 10px; color: #e6edf3; }
+.flow { display: flex; align-items: center; gap: 4px; margin: 8px 0; flex-wrap: wrap; }
+.fnode { background: #21262d; border: 1px solid #30363d; border-radius: 5px; padding: 4px 9px; font-size: 10px; color: #c9d1d9; font-family: 'Courier New', monospace; white-space: nowrap; }
+.fnode.green { background: #1a7f3733; border-color: #2ea043; color: #3fb950; }
+.fnode.blue { background: #1f6feb22; border-color: #1f6feb; color: #58a6ff; }
+.fnode.amber { background: #d2992211; border-color: #d29922; color: #e3b341; }
+.farr { color: #484f58; font-size: 11px; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.metric { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; }
+.mlabel { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+.mvalue { font-size: 17px; font-weight: bold; }
+.alert-bar { background: #d2992211; border: 1px solid #d2992255; border-radius: 6px; padding: 7px 12px; font-size: 11px; color: #e3b341; margin-bottom: 10px; }
+.pipeline-panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; overflow: visible; }
+.pipeline-ph { padding: 7px 14px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.pipeline-pb { padding: 12px 14px; display: flex; align-items: center; gap: 6px; }
+.layer { flex: 1; text-align: center; position: relative; }
+.layer:hover .ltip { display: block; }
+.lbox { border-radius: 5px; padding: 7px 4px; font-size: 11px; font-weight: bold; margin-bottom: 3px; cursor: default; }
+.lbox.done { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.lbox.active { background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+.lbox.wait { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.llabel { font-size: 9px; color: #8b949e; }
+.arr { color: #30363d; font-size: 14px; flex-shrink: 0; margin-bottom: 8px; }
+.ltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 7px 11px; font-size: 10px; color: #c9d1d9; white-space: nowrap; z-index: 100; font-family: sans-serif; pointer-events: none; line-height: 1.8; text-align: left; min-width: 200px; }
+.ltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #30363d; }
+.ltip strong { color: #e6edf3; display: block; margin-bottom: 2px; font-size: 11px; }
+.ltip .tm { color: #58a6ff; font-family: 'Courier New', monospace; }
+.ltip .tc { color: #3fb950; }
+.ltip .tl { color: #8b949e; }
+.pipeline-summary { padding: 6px 14px 8px; font-size: 10px; color: #8b949e; display: flex; gap: 12px; border-top: 1px solid #21262d; }
+.main { display: grid; grid-template-columns: 1fr 360px; gap: 10px; }
+.left { display: flex; flex-direction: column; }
+.right { display: flex; flex-direction: column; gap: 10px; }
+.panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: visible; flex: 1; display: flex; flex-direction: column; }
+.ph { padding: 7px 12px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.pt { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
+.pb { padding: 10px 12px; flex: 1; }
+.log-line { font-size: 11px; line-height: 1.65; color: #8b949e; }
+.log-line .g { color: #3fb950; }
+.log-line .b { color: #58a6ff; }
+.sm-panel { background: #161b22; border: 1px solid #1f6feb44; border-radius: 8px; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+.sm-header { padding: 7px 12px; background: #1f6feb0a; border-bottom: 1px solid #1f6feb33; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.sm-dot { width: 6px; height: 6px; border-radius: 50%; background: #58a6ff; flex-shrink: 0; }
+.sm-title { font-size: 10px; color: #58a6ff; text-transform: uppercase; letter-spacing: .5px; }
+.sm-msgs { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.sm-msg { font-size: 11px; line-height: 1.6; color: #c9d1d9; background: #1f6feb0a; border: 1px solid #1f6feb1a; border-radius: 5px; padding: 8px 10px; }
+.sm-msg .trigger { font-size: 9px; color: #484f58; margin-bottom: 4px; }
+.ask-area { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; flex-shrink: 0; }
+.ask-label { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+textarea.ask-ta { background: #0d1117; border: 1px solid #30363d; border-radius: 5px; color: #e6edf3; font-size: 12px; font-family: 'Courier New', monospace; padding: 9px 10px; resize: none; min-height: 86px; line-height: 1.6; width: 100%; outline: none; }
+textarea.ask-ta:focus { border-color: #1f6feb88; }
+.ask-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+.ask-hint { font-size: 9px; color: #484f58; }
+.btn-ask { background: #1f6feb22; border: 1px solid #1f6feb; color: #58a6ff; padding: 5px 14px; border-radius: 4px; font-size: 11px; font-family: 'Courier New', monospace; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <div class="logo-area">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+        <rect x="8" y="14" width="20" height="16" rx="4" fill="#1f6feb" stroke="#58a6ff" stroke-width="1"/>
+        <rect x="10" y="5" width="16" height="12" rx="3" fill="#1f6feb" stroke="#58a6ff" stroke-width="1"/>
+        <line x1="18" y1="5" x2="18" y2="2" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="18" cy="1.5" r="1.5" fill="#58a6ff"/>
+        <rect x="12" y="8" width="4" height="3" rx="1" fill="#e6edf3"/>
+        <rect x="20" y="8" width="4" height="3" rx="1" fill="#e6edf3"/>
+        <rect x="13" y="9" width="2" height="1.5" rx=".5" fill="#58a6ff"/>
+        <rect x="21" y="9" width="2" height="1.5" rx=".5" fill="#58a6ff"/>
+        <rect x="13" y="13" width="10" height="2" rx="1" fill="#58a6ff" opacity=".5"/>
+        <rect x="12" y="17" width="12" height="7" rx="2" fill="#0d1117" stroke="#30363d" stroke-width=".5"/>
+        <rect x="13" y="18" width="4" height="1.5" rx=".5" fill="#3fb950" opacity=".8"/>
+        <rect x="13" y="20.5" width="6" height="1.5" rx=".5" fill="#58a6ff" opacity=".8"/>
+        <rect x="13" y="23" width="3" height="1.5" rx=".5" fill="#d29922" opacity=".8"/>
+        <rect x="2" y="15" width="6" height="3" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="28" y="15" width="6" height="3" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="11" y="29" width="5" height="4" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="20" y="29" width="5" height="4" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+      </svg>
+      <div><div class="logo-text">bdralph</div><div class="logo-sub">governed agentic loops</div></div>
+    </div>
+    <div class="header-actions">
+      <button class="sbtn sbtn-after">stop after this<div class="stip">Completes the current iteration then stops.<br>Work from this iteration is preserved.</div></button>
+      <button class="sbtn sbtn-now">&#9632; stop now<div class="stip">Stops the loop immediately.<br>Current iteration is interrupted.</div></button>
+      <button class="btn-help" id="helpBtn" onclick="toggleHelp()">?</button>
+    </div>
+  </div>
+  <div class="header-bottom">
+    <span class="badge-run">&#9679; running</span>
+    <div class="task-wrap">
+      <span class="task-label">add input validation to TaskService &#8212; fixtures/playground/src/services/TaskService.ts</span>
+      <div class="ttip">add input validation to TaskService &#8212; fixtures/playground/src/services/TaskService.ts</div>
+    </div>
+  </div>
+</div>
+
+<div class="help-panel" id="helpPanel">
+  <div class="help-inner">
+    <div class="help-header">
+      <div class="help-tabs">
+        <button class="htab active" onclick="showTab('legend',this)">Legend</button>
+        <button class="htab" onclick="showTab('readme',this)">How it works</button>
+      </div>
+      <button class="btn-close" onclick="toggleHelp()">&#215;</button>
+    </div>
+    <div class="help-body">
+      <div class="tab-pane active" id="tab-legend">
+        <div class="legend-grid">
+          <div class="legend-item"><span class="legend-badge lb-g">L1</span><div class="legend-text"><strong>Sensitivity check</strong><br>Detects sensitive files modified. Escalates to L4.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-g">L2</span><div class="legend-text"><strong>Protocol review</strong><br>Verifies protocol compliance. Result: pass / failure.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-b">L3</span><div class="legend-text"><strong>Quality review</strong><br>Evaluates work quality. Emits SHIP or REVISE.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-gr">L4</span><div class="legend-text"><strong>Governance review</strong><br>Final compliance review. Triggered by L1 or consecutive REVISEs.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-g">SHIP</span><div class="legend-text"><strong>Approved</strong><br>Work approved. Loop exits successfully.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-a">REVISE</span><div class="legend-text"><strong>Revision needed</strong><br>Worker receives feedback and retries next iteration.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-r">BLOCKED</span><div class="legend-text"><strong>Blocked</strong><br>Max iterations reached without SHIP.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-b">Second Mind</span><div class="legend-text"><strong>Contextual advisor</strong><br>Analyzes the loop state and suggests direction.</div></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="tab-readme">
+        <div class="readme-body">
+          <h3>Iteration flow</h3>
+          <div class="flow">
+            <div class="fnode blue">operator</div><div class="farr">&#8594;</div>
+            <div class="fnode">worker</div><div class="farr">&#8594;</div>
+            <div class="fnode">L1</div><div class="farr">&#8594;</div>
+            <div class="fnode">L2</div><div class="farr">&#8594;</div>
+            <div class="fnode">L3</div><div class="farr">&#8594;</div>
+            <div class="fnode green">SHIP</div>
+          </div>
+          <div class="flow" style="margin-top:4px;padding-left:116px;">
+            <div class="fnode amber">REVISE</div><div class="farr">&#8594;</div>
+            <span style="font-size:10px;color:#484f58;">next iteration</span>
+          </div>
+          <h3>Second Mind</h3>
+          <div class="flow">
+            <div class="fnode blue">bdralph ask</div><div class="farr">&#8594;</div>
+            <div class="fnode blue">Second Mind</div><div class="farr">&#8594;</div>
+            <div class="fnode">response in panel</div>
+          </div>
+          <div style="font-size:10px;color:#8b949e;margin-top:4px;">also activates on: iteration threshold &#183; consecutive L4 REVISEs</div>
+          <h3>Quick commands</h3>
+          <code>bdralph "task" --max 5</code> &#8212; starts the loop<br>
+          <code>bdralph stop --now</code> &#8212; stops immediately<br>
+          <code>bdralph stop --after-this</code> &#8212; stops after current iteration<br>
+          <code>bdralph ask "question"</code> &#8212; asks Second Mind
+          <h3>Useful variables</h3>
+          <code>BDRALPH_NO_UI=1</code> &#8212; text mode, no interface<br>
+          <code>BDRALPH_BUDGET=0.50</code> &#8212; reviewer cost budget in USD<br>
+          <code>BDRALPH_L2_PROVIDER_CHAIN</code> &#8212; L2/L3 provider chain
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="mlabel">iteration</div><div class="mvalue" style="color:#58a6ff;">2 / 3</div></div>
+  <div class="metric"><div class="mlabel">worker</div><div class="mvalue" style="font-size:12px;margin-top:3px;">claude-sonnet-4-6</div></div>
+  <div class="metric"><div class="mlabel">reviewer cost</div><div class="mvalue" style="color:#3fb950;">$0.0023</div></div>
+  <div class="metric"><div class="mlabel">elapsed</div><div class="mvalue" style="color:#d29922;">4:32</div></div>
+</div>
+
+<div class="alert-bar">&#9888; L4 escalation triggered after 2 consecutive REVISEs &#8212; governance review active</div>
+
+<div class="pipeline-panel">
+  <div class="pipeline-ph">
+    <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;">review pipeline</span>
+    <span style="font-size:9px;color:#3fb950;">iteration 2</span>
+  </div>
+  <div class="pipeline-pb">
+    <div class="layer"><div class="lbox done">L1</div><div class="llabel">sensitivity</div>
+      <div class="ltip"><strong>L1 &#8212; Sensitivity check</strong><span class="tl">provider:</span> <span class="tm">bash (zero cost)</span><br><span class="tl">result:</span> <span style="color:#3fb950;">clean</span><br><span class="tl">cost:</span> <span class="tc">$0.0000</span><br><span class="tl">desc:</span> Detects sensitive files. Escalates to L4.</div>
+    </div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox done">L2</div><div class="llabel">protocol</div>
+      <div class="ltip"><strong>L2 &#8212; Protocol review</strong><span class="tl">provider:</span> <span class="tm">openai-cheap &#183; gpt-5.4-nano</span><br><span class="tl">result:</span> <span style="color:#3fb950;">PASS</span><br><span class="tl">cost:</span> <span class="tc">$0.0008</span><br><span class="tl">desc:</span> Verifies protocol compliance.</div>
+    </div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox active">L3</div><div class="llabel">quality</div>
+      <div class="ltip"><strong>L3 &#8212; Quality review</strong><span class="tl">provider:</span> <span class="tm">openai-standard &#183; gpt-5.4-mini</span><br><span class="tl">result:</span> <span style="color:#58a6ff;">in progress...</span><br><span class="tl">cost:</span> <span style="color:#58a6ff;">calculating...</span><br><span class="tl">desc:</span> Evaluates work quality. Emits SHIP or REVISE.</div>
+    </div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox wait">L4</div><div class="llabel">governance</div>
+      <div class="ltip"><strong>L4 &#8212; Governance review</strong><span class="tl">provider:</span> <span class="tm">openai-standard &#183; gpt-5.4-mini</span><br><span class="tl">result:</span> <span style="color:#484f58;">not triggered</span><br><span class="tl">triggers on:</span> L1 sensitive files or consecutive REVISEs<br><span class="tl">desc:</span> Final compliance and architecture review.</div>
+    </div>
+  </div>
+  <div class="pipeline-summary">
+    <span>L1: <span style="color:#3fb950;">clean</span></span>
+    <span style="color:#30363d;">&#183;</span>
+    <span>L2: <span style="color:#3fb950;">PASS</span> <span style="color:#484f58;">openai-cheap</span></span>
+    <span style="color:#30363d;">&#183;</span>
+    <span>L3: <span style="color:#58a6ff;">reviewing</span> <span style="color:#484f58;">openai-standard</span></span>
+    <span style="color:#30363d;">&#183;</span>
+    <span>layers cost: <span style="color:#3fb950;">$0.0008</span></span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="panel">
+      <div class="ph"><span class="pt">worker output</span><span style="font-size:9px;color:#484f58;">live</span></div>
+      <div class="pb">
+        <div class="log-line"><span class="g">&#8250;</span> Reading task.md...</div>
+        <div class="log-line"><span class="g">&#8250;</span> Reading review-feedback.txt</div>
+        <div class="log-line"><span class="b">&#8250;</span> Previous attempt flagged &#8212; anti-pattern detected by L2</div>
+        <div class="log-line"><span class="g">&#8250;</span> Modifying TaskService.createTask()</div>
+        <div class="log-line"><span class="g">&#8250;</span> Adding title validation guards</div>
+        <div class="log-line"><span class="g">&#8250;</span> Running npm test... 12 passed</div>
+        <div class="log-line"><span class="g">&#8250;</span> Writing work-complete.txt &#8212; done</div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="sm-panel">
+      <div class="sm-header"><div class="sm-dot"></div><span class="sm-title">Second Mind</span><span style="font-size:9px;color:#484f58;margin-left:auto;">1 response</span></div>
+      <div class="sm-msgs">
+        <div class="sm-msg"><div class="trigger">threshold trigger &#183; iteration 2</div>The worker has attempted input validation twice. Suggest focusing on the validation layer &#8212; add title length check (1&#8211;200 chars) and empty string guard before the repository call.</div>
+      </div>
+    </div>
+    <div class="ask-area">
+      <div class="ask-label">ask Second Mind</div>
+      <textarea class="ask-ta" placeholder="Why does the loop keep getting REVISE?&#10;What should the worker try next?"></textarea>
+      <div class="ask-footer">
+        <span class="ask-hint">enter &#183; shift+enter new line</span>
+        <button class="btn-ask">ask &#8250;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleHelp() {
+  const panel = document.getElementById('helpPanel');
+  const btn = document.getElementById('helpBtn');
+  panel.classList.toggle('open');
+  btn.classList.toggle('active', panel.classList.contains('open'));
+}
+function showTab(name, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.htab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
