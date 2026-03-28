@@ -71,6 +71,7 @@ function broadcastState(): void {
 
 let watchDebounce: ReturnType<typeof setTimeout> | null = null;
 const watchers: fs.FSWatcher[] = [];
+let watchersActive = false;
 
 function closeAllWatchers(): void {
   for (const w of watchers) {
@@ -81,9 +82,13 @@ function closeAllWatchers(): void {
     }
   }
   watchers.length = 0;
+  watchersActive = false;
 }
 
 function startFileWatcher(): void {
+  if (watchersActive) return;
+  watchersActive = true;
+
   // Watch RALPH_DIR for changes
   try {
     const w = fs.watch(ralphDir, { recursive: true }, () => {
@@ -134,8 +139,11 @@ function startPingInterval(): void {
 // Poll every 2s to ensure terminal state (shipped/blocked/stopped) reaches clients.
 // Once terminal state is broadcast, stop polling and close watchers.
 
+let terminalPollId: ReturnType<typeof setInterval> | null = null;
+
 function startTerminalPoll(): void {
-  const pollId = setInterval(() => {
+  if (terminalPollId) return;
+  terminalPollId = setInterval(() => {
     if (sseClients.size === 0) return;
     const opts: BuildStateOptions = { ralphDir };
     if (uiStatePrefix) opts.uiStatePrefix = uiStatePrefix;
@@ -155,7 +163,8 @@ function startTerminalPoll(): void {
         }
       }
       // Stop polling and close file watchers — terminal state is final
-      clearInterval(pollId);
+      clearInterval(terminalPollId!);
+      terminalPollId = null;
       closeAllWatchers();
     }
   }, 2000);
@@ -268,6 +277,14 @@ const server = http.createServer((req, res) => {
     res.write(`data: ${data}\n\n`);
 
     sseClients.add(res);
+
+    // Restart watchers and poll if they were closed (e.g. after terminal state)
+    if (!watchersActive) {
+      startFileWatcher();
+    }
+    if (!terminalPollId) {
+      startTerminalPoll();
+    }
 
     req.on("close", () => {
       sseClients.delete(res);
