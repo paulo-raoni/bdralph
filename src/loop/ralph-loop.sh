@@ -194,7 +194,7 @@ UI_STATE_ENABLED="$UI_ENABLED"
 RALPH_INK_ACTIVE=false
 INK_RENDERER_PID=""
 INK_HAS_TTY=false
-if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
+if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${BDRALPH_WEB_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
   INK_HAS_TTY=true
 fi
 
@@ -217,6 +217,21 @@ if [ "$INK_HAS_TTY" = "true" ] || { [ -n "${BDRALPH_INK_CAPTURE_FILE:-}" ] && [ 
     fi
   fi
   INK_RENDERER_PID=$!
+fi
+
+# --- web UI server ---
+# BDRALPH_WEB_UI=1 starts a lightweight HTTP server with SSE for a browser dashboard.
+WEB_SERVER_PID=""
+if [ "${BDRALPH_WEB_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; then
+  BDRALPH_WEB_PORT="${BDRALPH_WEB_PORT:-7340}"
+  node --import tsx "$LOOP_DIR/../web/server.ts" \
+    --ralph-dir "$RALPH_DIR" \
+    --port "$BDRALPH_WEB_PORT" \
+    --logs-dir "$LOGS_DIR" \
+    --ui-state-prefix "$UI_STATE_PREFIX" &
+  WEB_SERVER_PID=$!
+  UI_STATE_ENABLED=true
+  echo "[bdralph] web UI → http://localhost:$BDRALPH_WEB_PORT" >&2
 fi
 
 status_echo() {
@@ -791,6 +806,13 @@ ui_cleanup() {
   if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "${INK_RENDERER_PID:-}" ]; then
     kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
     wait "$INK_RENDERER_PID" 2>/dev/null || true
+  fi
+
+  if [ -n "${WEB_SERVER_PID:-}" ]; then
+    # Give the server time to poll and push final terminal state to SSE clients
+    sleep 1
+    kill "$WEB_SERVER_PID" 2>/dev/null || true
+    wait "$WEB_SERVER_PID" 2>/dev/null || true
   fi
 
   if [ "$UI_ENABLED" = "true" ]; then
@@ -2220,5 +2242,12 @@ fi
 if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "$INK_RENDERER_PID" ]; then
   kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
   wait "$INK_RENDERER_PID" 2>/dev/null || true
+fi
+
+# --- web server cleanup ---
+if [ -n "${WEB_SERVER_PID:-}" ]; then
+  sleep 1
+  kill "$WEB_SERVER_PID" 2>/dev/null || true
+  wait "$WEB_SERVER_PID" 2>/dev/null || true
 fi
 exit 1

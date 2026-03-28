@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>bdralph — web UI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; font-family: 'Courier New', monospace; color: #e6edf3; padding: 16px; }
+.header { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; }
+.header-top { padding: 10px 16px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px 8px 0 0; overflow: hidden; }
+.header-bottom { padding: 6px 16px; display: flex; align-items: center; gap: 8px; position: relative; overflow: visible; }
+.logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-text { color: #58a6ff; font-size: 22px; font-weight: bold; letter-spacing: 1px; line-height: 1; }
+.logo-sub { font-size: 11px; color: #484f58; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+.header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.sbtn { padding: 4px 12px; border-radius: 4px; font-size: 13px; font-family: 'Courier New', monospace; cursor: pointer; border: 1px solid; position: relative; white-space: nowrap; }
+.sbtn:hover .stip { display: block; }
+.sbtn-after { background: #d2992211; border-color: #d29922; color: #e3b341; }
+.sbtn-now { background: #da363322; border-color: #f85149; color: #f85149; }
+.stip { display: none; position: absolute; bottom: calc(100% + 6px); right: 0; background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; font-size: 12px; color: #c9d1d9; white-space: nowrap; z-index: 200; font-family: sans-serif; pointer-events: none; line-height: 1.5; }
+.stip::after { content: ''; position: absolute; top: 100%; right: 12px; border: 5px solid transparent; border-top-color: #30363d; }
+.btn-help { background: transparent; border: 1px solid #30363d; color: #8b949e; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif; flex-shrink: 0; }
+.btn-help:hover, .btn-help.active { border-color: #58a6ff; color: #58a6ff; }
+.badge { font-size: 11px; padding: 2px 7px; border-radius: 3px; font-family: 'Courier New', monospace; font-weight: bold; flex-shrink: 0; }
+.badge-run { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.badge-shipped { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.badge-blocked { background: #da363322; border: 1px solid #f85149; color: #f85149; }
+.badge-stopped { background: #d2992211; border: 1px solid #d29922; color: #e3b341; }
+.badge-idle { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.task-wrap { position: relative; min-width: 0; flex: 1; }
+.task-label { font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; display: block; }
+.task-wrap:hover .ttip { display: block; }
+.ttip { display: none; position: absolute; top: calc(100% + 5px); left: 0; background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; font-size: 12px; color: #c9d1d9; white-space: nowrap; z-index: 200; font-family: sans-serif; pointer-events: none; max-width: 500px; }
+.ttip::before { content: ''; position: absolute; bottom: 100%; left: 12px; border: 5px solid transparent; border-bottom-color: #30363d; }
+.help-panel { overflow: hidden; max-height: 0; transition: max-height .35s ease, margin .35s ease; margin-bottom: 0; }
+.help-panel.open { max-height: 700px; margin-bottom: 10px; }
+.help-inner { background: #161b22; border: 1px solid #1f6feb44; border-radius: 8px; overflow: hidden; }
+.help-header { padding: 8px 16px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.help-tabs { display: flex; }
+.htab { padding: 6px 16px; font-size: 12px; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; font-family: sans-serif; text-transform: uppercase; letter-spacing: .5px; background: none; border-top: none; border-left: none; border-right: none; }
+.htab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.btn-close { background: transparent; border: 1px solid #30363d; color: #8b949e; width: 22px; height: 22px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif; line-height: 1; }
+.btn-close:hover { border-color: #f85149; color: #f85149; }
+.help-body { padding: 14px 16px; max-height: 560px; overflow-y: auto; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.legend-item { display: flex; gap: 10px; align-items: flex-start; }
+.legend-badge { flex-shrink: 0; font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 1px; white-space: nowrap; }
+.lb-g { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.lb-b { background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+.lb-gr { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.lb-a { background: #d2992211; border: 1px solid #d29922; color: #e3b341; }
+.lb-r { background: #da363322; border: 1px solid #da3633; color: #f85149; }
+.legend-text { font-size: 13px; color: #8b949e; font-family: sans-serif; line-height: 1.5; }
+.legend-text strong { color: #c9d1d9; font-weight: 500; }
+.readme-body { font-size: 13px; color: #8b949e; font-family: sans-serif; line-height: 1.7; }
+.readme-body h3 { font-size: 12px; color: #c9d1d9; font-weight: 500; margin: 14px 0 6px; }
+.readme-body h3:first-child { margin-top: 0; }
+.readme-body code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; color: #e6edf3; }
+.flow { display: flex; align-items: center; gap: 4px; margin: 8px 0; flex-wrap: wrap; }
+.fnode { background: #21262d; border: 1px solid #30363d; border-radius: 5px; padding: 4px 9px; font-size: 12px; color: #c9d1d9; font-family: 'Courier New', monospace; white-space: nowrap; }
+.fnode.green { background: #1a7f3733; border-color: #2ea043; color: #3fb950; }
+.fnode.blue { background: #1f6feb22; border-color: #1f6feb; color: #58a6ff; }
+.fnode.amber { background: #d2992211; border-color: #d29922; color: #e3b341; }
+.farr { color: #484f58; font-size: 13px; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.metric { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; }
+.mlabel { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+.mvalue { font-size: 20px; font-weight: bold; }
+.alert-bar { background: #d2992211; border: 1px solid #d2992255; border-radius: 6px; padding: 7px 12px; font-size: 13px; color: #e3b341; margin-bottom: 10px; display: none; }
+.alert-bar.visible { display: block; }
+.pipeline-panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; overflow: visible; }
+.pipeline-ph { padding: 7px 14px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.pipeline-pb { padding: 12px 14px; display: flex; align-items: center; gap: 6px; }
+.layer { flex: 1; text-align: center; position: relative; }
+.layer:hover .ltip { display: block; }
+.lbox { border-radius: 5px; padding: 7px 4px; font-size: 13px; font-weight: bold; margin-bottom: 3px; cursor: default; }
+.lbox.done { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.lbox.active { background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+.lbox.wait { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.lbox.error { background: #da363322; border: 1px solid #f85149; color: #f85149; }
+.lbox.warn { background: #d2992222; border: 1px solid #d29922; color: #e3b341; }
+.lbox.skip { background: #21262d; border: 1px dashed #484f58; color: #484f58; }
+.llabel { font-size: 11px; color: #8b949e; }
+.arr { color: #30363d; font-size: 14px; flex-shrink: 0; margin-bottom: 8px; }
+.ltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1c2128; border: 1px solid #30363d; border-radius: 5px; padding: 7px 11px; font-size: 12px; color: #c9d1d9; white-space: nowrap; z-index: 100; font-family: sans-serif; pointer-events: none; line-height: 1.8; text-align: left; min-width: 200px; }
+.ltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #30363d; }
+.ltip strong { color: #e6edf3; display: block; margin-bottom: 2px; font-size: 13px; }
+.ltip .tm { color: #58a6ff; font-family: 'Courier New', monospace; }
+.ltip .tc { color: #3fb950; }
+.ltip .tl { color: #8b949e; }
+.pipeline-summary { padding: 6px 14px 8px; font-size: 12px; color: #8b949e; display: flex; gap: 12px; border-top: 1px solid #21262d; flex-wrap: wrap; }
+.pipeline-banner { margin: 0 14px 10px; }
+.main { display: grid; grid-template-columns: 1fr 360px; gap: 10px; }
+.left { display: flex; flex-direction: column; }
+.right { display: flex; flex-direction: column; gap: 10px; }
+.panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: visible; flex: 1; display: flex; flex-direction: column; }
+.ph { padding: 7px 12px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.pt { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
+.pb { padding: 10px 12px; flex: 1; overflow-y: auto; max-height: 400px; }
+.log-line { font-size: 13px; line-height: 1.65; color: #8b949e; }
+.log-line .g { color: #3fb950; }
+.log-line .b { color: #58a6ff; }
+.log-line .r { color: #f85149; }
+.log-line .y { color: #e3b341; }
+.sm-panel { background: #161b22; border: 1px solid #1f6feb44; border-radius: 8px; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+.sm-header { padding: 7px 12px; background: #1f6feb0a; border-bottom: 1px solid #1f6feb33; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.sm-dot { width: 6px; height: 6px; border-radius: 50%; background: #58a6ff; flex-shrink: 0; }
+.sm-title { font-size: 12px; color: #58a6ff; text-transform: uppercase; letter-spacing: .5px; }
+.sm-msgs { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.sm-msg { font-size: 13px; line-height: 1.6; color: #c9d1d9; background: #1f6feb0a; border: 1px solid #1f6feb1a; border-radius: 5px; padding: 8px 10px; }
+.sm-msg .trigger { font-size: 11px; color: #484f58; margin-bottom: 4px; }
+.ask-area { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; flex-shrink: 0; }
+.ask-label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+textarea.ask-ta { background: #0d1117; border: 1px solid #30363d; border-radius: 5px; color: #e6edf3; font-size: 14px; font-family: 'Courier New', monospace; padding: 9px 10px; resize: none; min-height: 86px; line-height: 1.6; width: 100%; outline: none; }
+textarea.ask-ta:focus { border-color: #1f6feb88; }
+.ask-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+.ask-hint { font-size: 11px; color: #484f58; }
+.btn-ask { background: #1f6feb22; border: 1px solid #1f6feb; color: #58a6ff; padding: 5px 14px; border-radius: 4px; font-size: 13px; font-family: 'Courier New', monospace; cursor: pointer; }
+.err-banner { background: #da363311; border: 1px solid #f8514966; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #f85149; display: flex; gap: 8px; align-items: flex-start; }
+.warn-banner { background: #d2992211; border: 1px solid #d2992266; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #e3b341; display: flex; gap: 8px; align-items: flex-start; }
+.info-banner { background: #1f6feb11; border: 1px solid #1f6feb44; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #58a6ff; display: flex; gap: 8px; align-items: flex-start; }
+.ok-banner { background: #1a7f3711; border: 1px solid #2ea04366; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #3fb950; display: flex; gap: 8px; align-items: flex-start; }
+.banner-icon { flex-shrink: 0; font-size: 12px; }
+.banner-text { line-height: 1.5; }
+.banner-text strong { display: block; margin-bottom: 2px; }
+.terminal-panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; overflow: hidden; display: none; }
+.terminal-panel.visible { display: block; }
+.terminal-ph { padding: 7px 14px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.terminal-pb { padding: 10px 14px; }
+.terminal-stats { font-size: 10px; color: #8b949e; display: flex; gap: 12px; margin-top: 8px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <div class="logo-area">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+        <rect x="8" y="14" width="20" height="16" rx="4" fill="#1f6feb" stroke="#58a6ff" stroke-width="1"/>
+        <rect x="10" y="5" width="16" height="12" rx="3" fill="#1f6feb" stroke="#58a6ff" stroke-width="1"/>
+        <line x1="18" y1="5" x2="18" y2="2" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="18" cy="1.5" r="1.5" fill="#58a6ff"/>
+        <rect x="12" y="8" width="4" height="3" rx="1" fill="#e6edf3"/>
+        <rect x="20" y="8" width="4" height="3" rx="1" fill="#e6edf3"/>
+        <rect x="13" y="9" width="2" height="1.5" rx=".5" fill="#58a6ff"/>
+        <rect x="21" y="9" width="2" height="1.5" rx=".5" fill="#58a6ff"/>
+        <rect x="13" y="13" width="10" height="2" rx="1" fill="#58a6ff" opacity=".5"/>
+        <rect x="12" y="17" width="12" height="7" rx="2" fill="#0d1117" stroke="#30363d" stroke-width=".5"/>
+        <rect x="13" y="18" width="4" height="1.5" rx=".5" fill="#3fb950" opacity=".8"/>
+        <rect x="13" y="20.5" width="6" height="1.5" rx=".5" fill="#58a6ff" opacity=".8"/>
+        <rect x="13" y="23" width="3" height="1.5" rx=".5" fill="#d29922" opacity=".8"/>
+        <rect x="2" y="15" width="6" height="3" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="28" y="15" width="6" height="3" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="11" y="29" width="5" height="4" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+        <rect x="20" y="29" width="5" height="4" rx="1.5" fill="#1f6feb" stroke="#58a6ff" stroke-width=".8"/>
+      </svg>
+      <div><div class="logo-text">bdralph</div><div class="logo-sub">governed agentic loops</div></div>
+    </div>
+    <div class="header-actions" id="stopButtons">
+      <button class="sbtn sbtn-after" onclick="postAction('/stop-after-this')">stop after this<div class="stip">Completes the current iteration then stops.<br>Work from this iteration is preserved.</div></button>
+      <button class="sbtn sbtn-now" onclick="postAction('/stop-now')">&#9632; stop now<div class="stip">Stops the loop immediately.<br>Current iteration is interrupted.</div></button>
+      <button class="btn-help" id="helpBtn" onclick="toggleHelp()">?</button>
+    </div>
+  </div>
+  <div class="header-bottom">
+    <span class="badge badge-idle" id="statusBadge">&#9679; idle</span>
+    <div class="task-wrap">
+      <span class="task-label" id="taskLabel">waiting for loop...</span>
+      <div class="ttip" id="taskTooltip">waiting for loop...</div>
+    </div>
+  </div>
+</div>
+
+<div class="help-panel" id="helpPanel">
+  <div class="help-inner">
+    <div class="help-header">
+      <div class="help-tabs">
+        <button class="htab active" onclick="showTab('legend',this)">Legend</button>
+        <button class="htab" onclick="showTab('readme',this)">How it works</button>
+      </div>
+      <button class="btn-close" onclick="toggleHelp()">&#215;</button>
+    </div>
+    <div class="help-body">
+      <div class="tab-pane active" id="tab-legend">
+        <div class="legend-grid">
+          <div class="legend-item"><span class="legend-badge lb-g">L1</span><div class="legend-text"><strong>Sensitivity check</strong><br>Detects sensitive files modified. Escalates to L4.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-g">L2</span><div class="legend-text"><strong>Protocol review</strong><br>Verifies protocol compliance. Result: pass / failure.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-b">L3</span><div class="legend-text"><strong>Quality review</strong><br>Evaluates work quality. Emits SHIP or REVISE.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-gr">L4</span><div class="legend-text"><strong>Governance review</strong><br>Final compliance review. Triggered by L1 or consecutive REVISEs.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-g">SHIP</span><div class="legend-text"><strong>Approved</strong><br>Work approved. Loop exits successfully.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-a">REVISE</span><div class="legend-text"><strong>Revision needed</strong><br>Worker receives feedback and retries next iteration.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-r">BLOCKED</span><div class="legend-text"><strong>Blocked</strong><br>Max iterations reached without SHIP.</div></div>
+          <div class="legend-item"><span class="legend-badge lb-b">Second Mind</span><div class="legend-text"><strong>Contextual advisor</strong><br>Analyzes the loop state and suggests direction.</div></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="tab-readme">
+        <div class="readme-body">
+          <h3>Iteration flow</h3>
+          <div class="flow">
+            <div class="fnode blue">operator</div><div class="farr">&#8594;</div>
+            <div class="fnode">worker</div><div class="farr">&#8594;</div>
+            <div class="fnode">L1</div><div class="farr">&#8594;</div>
+            <div class="fnode">L2</div><div class="farr">&#8594;</div>
+            <div class="fnode">L3</div><div class="farr">&#8594;</div>
+            <div class="fnode green">SHIP</div>
+          </div>
+          <div class="flow" style="margin-top:4px;padding-left:116px;">
+            <div class="fnode amber">REVISE</div><div class="farr">&#8594;</div>
+            <span style="font-size:10px;color:#484f58;">next iteration</span>
+          </div>
+          <h3>Second Mind</h3>
+          <div class="flow">
+            <div class="fnode blue">bdralph ask</div><div class="farr">&#8594;</div>
+            <div class="fnode blue">Second Mind</div><div class="farr">&#8594;</div>
+            <div class="fnode">response in panel</div>
+          </div>
+          <div style="font-size:10px;color:#8b949e;margin-top:4px;">also activates on: iteration threshold &#183; consecutive L4 REVISEs</div>
+          <h3>Quick commands</h3>
+          <code>bdralph "task" --max 5</code> &#8212; starts the loop<br>
+          <code>bdralph stop --now</code> &#8212; stops immediately<br>
+          <code>bdralph stop --after-this</code> &#8212; stops after current iteration<br>
+          <code>bdralph ask "question"</code> &#8212; asks Second Mind
+          <h3>Useful variables</h3>
+          <code>BDRALPH_NO_UI=1</code> &#8212; text mode, no interface<br>
+          <code>BDRALPH_BUDGET=0.50</code> &#8212; reviewer cost budget in USD<br>
+          <code>BDRALPH_L2_PROVIDER_CHAIN</code> &#8212; L2/L3 provider chain
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="mlabel">iteration</div><div class="mvalue" id="metricIteration" style="color:#58a6ff;">0 / ?</div></div>
+  <div class="metric"><div class="mlabel">worker</div><div class="mvalue" id="metricWorker" style="font-size:12px;margin-top:3px;">-</div></div>
+  <div class="metric"><div class="mlabel">reviewer cost</div><div class="mvalue" id="metricCost" style="color:#3fb950;">$0.0000</div></div>
+  <div class="metric"><div class="mlabel">elapsed</div><div class="mvalue" id="metricElapsed" style="color:#d29922;">0:00</div></div>
+</div>
+
+<div class="alert-bar" id="alertBar"></div>
+
+<div class="terminal-panel" id="terminalPanel">
+  <div class="terminal-ph">
+    <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;">loop ended</span>
+    <span class="badge" id="terminalBadge"></span>
+  </div>
+  <div class="terminal-pb">
+    <div id="terminalBanner"></div>
+    <div class="terminal-stats" id="terminalStats"></div>
+  </div>
+</div>
+
+<div class="pipeline-panel">
+  <div class="pipeline-ph">
+    <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;">review pipeline</span>
+    <span style="font-size:9px;color:#3fb950;" id="pipelineIterLabel"></span>
+  </div>
+  <div class="pipeline-pb" id="pipelineBody">
+    <div class="layer"><div class="lbox wait" id="lbox-L1">L1</div><div class="llabel">sensitivity</div><div class="ltip" id="ltip-L1"></div></div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox wait" id="lbox-L2">L2</div><div class="llabel">protocol</div><div class="ltip" id="ltip-L2"></div></div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox wait" id="lbox-L3">L3</div><div class="llabel">quality</div><div class="ltip" id="ltip-L3"></div></div>
+    <div class="arr">&#8250;</div>
+    <div class="layer"><div class="lbox wait" id="lbox-L4">L4</div><div class="llabel">governance</div><div class="ltip" id="ltip-L4"></div></div>
+  </div>
+  <div class="pipeline-summary" id="pipelineSummary"></div>
+  <div class="pipeline-banner" id="pipelineBanner"></div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="panel">
+      <div class="ph"><span class="pt">worker output</span><span style="font-size:9px;color:#484f58;" id="workerLiveLabel">live</span></div>
+      <div class="pb" id="workerOutput"></div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="sm-panel">
+      <div class="sm-header"><div class="sm-dot"></div><span class="sm-title">Second Mind</span><span style="font-size:9px;color:#484f58;margin-left:auto;" id="smCount">0 responses</span></div>
+      <div class="sm-msgs" id="smMessages">
+        <div style="font-size:11px;color:#484f58;padding:8px 0;">No responses yet.</div>
+      </div>
+    </div>
+    <div class="ask-area">
+      <div class="ask-label">ask Second Mind</div>
+      <textarea class="ask-ta" id="askTextarea" placeholder="Why does the loop keep getting REVISE?&#10;What should the worker try next?"></textarea>
+      <div class="ask-footer">
+        <span class="ask-hint">enter &#183; shift+enter new line</span>
+        <button class="btn-ask" onclick="sendAsk()">ask &#8250;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LAYER_DESCS = {
+  L1: 'Detects sensitive files. Escalates to L4.',
+  L2: 'Verifies protocol compliance.',
+  L3: 'Evaluates work quality. Emits SHIP or REVISE.',
+  L4: 'Final compliance and architecture review.'
+};
+const LAYER_NAMES = { L1: 'Sensitivity check', L2: 'Protocol review', L3: 'Quality review', L4: 'Governance review' };
+
+function toggleHelp() {
+  const panel = document.getElementById('helpPanel');
+  const btn = document.getElementById('helpBtn');
+  panel.classList.toggle('open');
+  btn.classList.toggle('active', panel.classList.contains('open'));
+}
+
+function showTab(name, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.htab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function formatElapsed(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function formatCost(usd) {
+  return '$' + usd.toFixed(4);
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function postAction(endpoint) {
+  fetch(endpoint, { method: 'POST' }).catch(() => {});
+}
+
+function sendAsk() {
+  const ta = document.getElementById('askTextarea');
+  const text = ta.value.trim();
+  if (!text) return;
+  const btn = document.querySelector('.btn-ask');
+  btn.textContent = '\u27F3 thinking...';
+  btn.disabled = true;
+  ta.value = '';
+  fetch('/ask', { method: 'POST', body: text }).then(() => {
+    btn.textContent = 'sent \u2713';
+    setTimeout(() => { btn.textContent = 'ask \u203A'; btn.disabled = false; }, 3000);
+  }).catch(() => {
+    btn.textContent = 'ask \u203A';
+    btn.disabled = false;
+  });
+}
+
+document.getElementById('askTextarea').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAsk();
+  }
+});
+
+function updateDashboard(state) {
+  // Status badge
+  const badge = document.getElementById('statusBadge');
+  const statusMap = {
+    running: { text: '\u25CF running', cls: 'badge badge-run' },
+    shipped: { text: '\u25CF shipped', cls: 'badge badge-shipped' },
+    blocked: { text: '\u25CF blocked', cls: 'badge badge-blocked' },
+    stopped: { text: '\u25CF stopped', cls: 'badge badge-stopped' },
+    idle: { text: '\u25CF idle', cls: 'badge badge-idle' }
+  };
+  const sm = statusMap[state.status] || statusMap.idle;
+  badge.textContent = sm.text;
+  badge.className = sm.cls;
+
+  // Task
+  document.getElementById('taskLabel').textContent = state.task || 'waiting for loop...';
+  document.getElementById('taskTooltip').textContent = state.task || 'waiting for loop...';
+
+  // Stop buttons visibility
+  const isTerminal = state.status === 'shipped' || state.status === 'blocked' || state.status === 'stopped';
+  document.getElementById('stopButtons').querySelectorAll('.sbtn').forEach(b => {
+    b.style.display = isTerminal ? 'none' : '';
+  });
+
+  // Metrics
+  const maxStr = state.maxIterations > 0 ? state.maxIterations : '?';
+  document.getElementById('metricIteration').textContent = state.iteration + ' / ' + maxStr;
+  document.getElementById('metricWorker').textContent = state.workerModel || '-';
+  document.getElementById('metricCost').textContent = formatCost(state.reviewerCost);
+  document.getElementById('metricElapsed').textContent = formatElapsed(state.elapsedSeconds);
+
+  // Alerts
+  const alertBar = document.getElementById('alertBar');
+  if (state.alerts && state.alerts.length > 0) {
+    alertBar.textContent = '\u26A0 ' + state.alerts.join(' \u2014 ');
+    alertBar.classList.add('visible');
+  } else {
+    alertBar.classList.remove('visible');
+  }
+
+  // Terminal state
+  const tp = document.getElementById('terminalPanel');
+  if (state.terminalState) {
+    tp.classList.add('visible');
+    const tb = document.getElementById('terminalBadge');
+    const ts = state.terminalState;
+    if (ts.type === 'shipped') {
+      tb.className = 'badge badge-shipped';
+      tb.textContent = 'shipped';
+      document.getElementById('terminalBanner').innerHTML =
+        '<div class="ok-banner"><span class="banner-icon">\u2713</span><div class="banner-text"><strong>' + esc(ts.message) + '</strong>' + esc(ts.suggestion || '') + '</div></div>';
+    } else if (ts.type === 'blocked') {
+      tb.className = 'badge badge-blocked';
+      tb.textContent = 'blocked';
+      document.getElementById('terminalBanner').innerHTML =
+        '<div class="err-banner"><span class="banner-icon">\u2717</span><div class="banner-text"><strong>' + esc(ts.message) + '</strong>' + esc(ts.suggestion || '') + '</div></div>';
+    } else {
+      tb.className = 'badge badge-stopped';
+      tb.textContent = 'budget';
+      document.getElementById('terminalBanner').innerHTML =
+        '<div class="warn-banner"><span class="banner-icon">\u26A0</span><div class="banner-text"><strong>' + esc(ts.message) + '</strong>' + esc(ts.suggestion || '') + '</div></div>';
+    }
+    const statsEl = document.getElementById('terminalStats');
+    const parts = [];
+    if (ts.finalIterations != null) parts.push('iterations: <span style="color:#e6edf3;">' + ts.finalIterations + (state.maxIterations > 0 ? ' / ' + state.maxIterations : '') + '</span>');
+    if (ts.finalCost != null) parts.push('reviewer cost: <span style="color:#e6edf3;">' + formatCost(ts.finalCost) + '</span>');
+    if (ts.finalElapsed != null) parts.push('elapsed: <span style="color:#e6edf3;">' + formatElapsed(ts.finalElapsed) + '</span>');
+    statsEl.innerHTML = parts.join(' <span style="color:#30363d;">\u00B7</span> ');
+  } else {
+    tp.classList.remove('visible');
+  }
+
+  // Pipeline
+  document.getElementById('pipelineIterLabel').textContent = state.iteration > 0 ? 'iteration ' + state.iteration : '';
+  const summaryParts = [];
+  (state.pipeline || []).forEach(function(layer) {
+    const box = document.getElementById('lbox-' + layer.layer);
+    const tip = document.getElementById('ltip-' + layer.layer);
+    if (!box) return;
+
+    // Update box state class
+    box.className = 'lbox ' + layer.state;
+
+    // Build tooltip
+    const resultColor = { done: '#3fb950', active: '#58a6ff', wait: '#484f58', error: '#f85149', warn: '#e3b341', skip: '#484f58' };
+    const resultText = layer.result || (layer.state === 'active' ? 'in progress...' : layer.state === 'skip' ? 'skipped' : 'not triggered');
+    const costText = layer.costUsd != null ? formatCost(layer.costUsd) : (layer.state === 'active' ? 'calculating...' : '-');
+    const provText = layer.provider || (layer.layer === 'L1' ? 'bash (zero cost)' : '-');
+    tip.innerHTML = '<strong>' + layer.layer + ' \u2014 ' + esc(LAYER_NAMES[layer.layer] || '') + '</strong>' +
+      '<span class="tl">provider:</span> <span class="tm">' + esc(provText) + '</span><br>' +
+      '<span class="tl">result:</span> <span style="color:' + (resultColor[layer.state] || '#8b949e') + ';">' + esc(resultText) + '</span><br>' +
+      '<span class="tl">cost:</span> <span class="tc">' + costText + '</span><br>' +
+      '<span class="tl">desc:</span> ' + esc(LAYER_DESCS[layer.layer] || '');
+
+    // Summary
+    if (layer.state !== 'wait') {
+      var resultStyle;
+      var sResult = layer.result || (layer.state === 'active' ? 'reviewing' : layer.state);
+      var upperResult = (sResult || '').toUpperCase();
+      if (upperResult === 'SHIP' || upperResult === 'PASS' || upperResult === 'CLEAN') {
+        resultStyle = 'color:#3fb950;';
+      } else if (upperResult === 'REVISE') {
+        resultStyle = 'color:#e3b341;';
+      } else if (upperResult === 'BLOCKED' || upperResult === 'ERROR' || upperResult === 'FAIL') {
+        resultStyle = 'color:#f85149;';
+      } else if (layer.state === 'active') {
+        resultStyle = 'color:#58a6ff;';
+      } else if (layer.state === 'skip') {
+        resultStyle = 'color:#484f58;';
+      } else {
+        resultStyle = 'color:#3fb950;';
+      }
+      let summaryStr = layer.layer + ': <span style="' + resultStyle + '">' + esc(sResult) + '</span>';
+      if (layer.provider) summaryStr += ' <span style="color:#484f58;">' + esc(layer.provider) + '</span>';
+      summaryParts.push(summaryStr);
+    }
+  });
+
+  // Add total layers cost
+  const totalLayerCost = (state.pipeline || []).reduce(function(sum, l) { return sum + (l.costUsd || 0); }, 0);
+  if (totalLayerCost > 0) summaryParts.push('layers cost: <span style="color:#3fb950;">' + formatCost(totalLayerCost) + '</span>');
+  document.getElementById('pipelineSummary').innerHTML = summaryParts.join(' <span style="color:#30363d;">\u00B7</span> ');
+
+  // Pipeline banners (escalation, errors)
+  const bannerEl = document.getElementById('pipelineBanner');
+  bannerEl.innerHTML = '';
+  const pipelineArr = state.pipeline || [];
+  // L1 escalation
+  const l1 = pipelineArr.find(l => l.layer === 'L1');
+  const hasSkipped = pipelineArr.some(l => l.state === 'skip');
+  if (l1 && l1.state === 'warn' && hasSkipped) {
+    bannerEl.innerHTML = '<div class="info-banner"><span class="banner-icon">\u2191</span><div class="banner-text"><strong>L1 detected sensitive files \u2014 escalated directly to L4</strong>L2 and L3 skipped.</div></div>';
+  }
+  // Layer error
+  const errLayer = pipelineArr.find(l => l.state === 'error');
+  if (errLayer) {
+    bannerEl.innerHTML = '<div class="err-banner"><span class="banner-icon">\u2717</span><div class="banner-text"><strong>' + errLayer.layer + ' provider error</strong>' + esc(errLayer.result || 'Unknown error') + '</div></div>';
+  }
+  // Layer warning (fallback)
+  const warnLayer = pipelineArr.find(l => l.state === 'warn' && l.layer !== 'L1');
+  if (warnLayer) {
+    bannerEl.innerHTML = '<div class="warn-banner"><span class="banner-icon">\u26A0</span><div class="banner-text"><strong>' + warnLayer.layer + ' fallback</strong>Review continued with fallback provider.</div></div>';
+  }
+
+  // Worker output
+  const woEl = document.getElementById('workerOutput');
+  if (state.workerOutput && state.workerOutput.length > 0) {
+    woEl.innerHTML = state.workerOutput.map(function(line) {
+      const cls = line.type === 'error' ? 'r' : line.type === 'warning' ? 'y' : line.type === 'info' ? 'b' : 'g';
+      const prefix = line.type === 'error' ? '\u2717' : line.type === 'warning' ? '\u26A0' : '\u203A';
+      return '<div class="log-line"><span class="' + cls + '">' + prefix + '</span> <span class="' + (line.type === 'normal' ? '' : cls) + '">' + esc(line.text) + '</span></div>';
+    }).join('');
+    woEl.scrollTop = woEl.scrollHeight;
+  } else {
+    woEl.innerHTML = '<div class="log-line" style="color:#484f58;">Waiting for worker output...</div>';
+  }
+  document.getElementById('workerLiveLabel').textContent = state.status === 'running' ? 'live' : '';
+
+  // Second Mind
+  const smEl = document.getElementById('smMessages');
+  if (state.secondMind && state.secondMind.length > 0) {
+    smEl.innerHTML = state.secondMind.map(function(msg) {
+      return '<div class="sm-msg"><div class="trigger">' + esc(msg.trigger) + '</div>' + esc(msg.text) + '</div>';
+    }).join('');
+    document.getElementById('smCount').textContent = state.secondMind.length + ' response' + (state.secondMind.length !== 1 ? 's' : '');
+  } else {
+    smEl.innerHTML = '<div style="font-size:11px;color:#484f58;padding:8px 0;">No responses yet.</div>';
+    document.getElementById('smCount').textContent = '0 responses';
+  }
+}
+
+// --- SSE connection ---
+function connectSSE() {
+  const evtSource = new EventSource('/events');
+  evtSource.onmessage = function(event) {
+    try {
+      const state = JSON.parse(event.data);
+      updateDashboard(state);
+    } catch(e) {
+      console.error('Failed to parse SSE data:', e);
+    }
+  };
+  evtSource.onerror = function() {
+    // Browser will auto-reconnect
+  };
+}
+
+connectSSE();
+</script>
+</body>
+</html>

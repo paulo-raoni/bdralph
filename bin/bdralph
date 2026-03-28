@@ -16,7 +16,7 @@ REVIEWER_MODE="pipeline"
 TASK=""
 
 # --- Known flags (for typo detection) ---
-KNOWN_FLAGS=("--max" "--budget" "--worker" "--escalate-after" "--reviewer-mode" "--help")
+KNOWN_FLAGS=("--max" "--budget" "--worker" "--escalate-after" "--reviewer-mode" "--web-ui" "--help")
 
 # --- Levenshtein distance (bash-only, no external deps) ---
 levenshtein() {
@@ -79,6 +79,7 @@ Options:
   --worker MODE          sonnet|opus|auto (default: sonnet)
   --escalate-after N     Auto escalation threshold (default: 3)
   --reviewer-mode MODE   pipeline|single (default: pipeline)
+  --web-ui               Enable web UI dashboard (http://localhost:7340)
   --help                 Show this help message
 USAGE
 }
@@ -173,6 +174,10 @@ while [[ $# -gt 0 ]]; do
       REVIEWER_MODE="$2"
       shift 2
       ;;
+    --web-ui)
+      export BDRALPH_WEB_UI=1
+      shift
+      ;;
     --*)
       suggestion=$(closest_flag "$1")
       if [[ -n "$suggestion" ]]; then
@@ -249,6 +254,7 @@ export BDRALPH_BUDGET="$BUDGET"
 if [[ "${BDRALPH_LOOP_MOCK:-}" == "1" ]]; then
   if [[ "${BDRALPH_MOCK_DUMP_ENV:-}" == "1" ]]; then
     echo "ink_ui: ${BDRALPH_INK_UI:-unset}"
+    echo "web_ui: ${BDRALPH_WEB_UI:-unset}"
     echo "budget_env: ${BDRALPH_BUDGET:-unset}"
   fi
   mock_result="${BDRALPH_MOCK_RESULT:-SHIP}"

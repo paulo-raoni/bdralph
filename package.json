@@ -12,6 +12,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:e2e:headless": "BDRALPH_E2E_MODE=headless-mock vitest run --config vitest.e2e.headless.config.ts",
     "test:e2e:pty": "BDRALPH_E2E_MODE=pty-mock vitest run --config vitest.e2e.pty.config.ts",
+    "test:web:smoke": "vitest run --config vitest.web.config.ts",
     "build": "echo 'No build step — bdralph is a bash entry point'",
     "lint": "shellcheck bin/bdralph src/loop/*.sh",
     "typecheck": "tsc --noEmit"
