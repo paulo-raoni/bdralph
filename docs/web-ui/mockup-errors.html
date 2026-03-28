@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>bdralph &#8212; Web UI Mockup (Error States)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; font-family: 'Courier New', monospace; color: #e6edf3; padding: 16px; }
+h2 { font-size: 11px; color: #484f58; text-transform: uppercase; letter-spacing: 1px; font-family: sans-serif; margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #21262d; }
+h2:first-child { margin-top: 0; }
+.panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.ph { padding: 7px 14px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+.pt { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
+.pb { padding: 10px 14px; }
+.log-line { font-size: 11px; line-height: 1.7; font-family: 'Courier New', monospace; }
+.log-line .g { color: #3fb950; }
+.log-line .b { color: #58a6ff; }
+.log-line .r { color: #f85149; }
+.log-line .y { color: #e3b341; }
+.log-line .d { color: #8b949e; }
+.pipeline { display: flex; align-items: center; gap: 6px; }
+.layer { flex: 1; text-align: center; }
+.lbox { border-radius: 5px; padding: 7px 4px; font-size: 11px; font-weight: bold; margin-bottom: 3px; }
+.lbox.done  { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.lbox.active{ background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+.lbox.wait  { background: #21262d; border: 1px solid #30363d; color: #484f58; }
+.lbox.error { background: #da363322; border: 1px solid #f85149; color: #f85149; }
+.lbox.warn  { background: #d2992222; border: 1px solid #d29922; color: #e3b341; }
+.lbox.skip  { background: #21262d; border: 1px dashed #484f58; color: #484f58; }
+.llabel { font-size: 9px; color: #8b949e; }
+.arr { color: #30363d; font-size: 14px; flex-shrink: 0; margin-bottom: 8px; }
+.arr.red { color: #f8514966; }
+.status-row { margin-top: 8px; padding-top: 7px; border-top: 1px solid #21262d; font-size: 10px; color: #8b949e; display: flex; gap: 12px; flex-wrap: wrap; }
+.err-banner { background: #da363311; border: 1px solid #f8514966; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #f85149; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+.warn-banner { background: #d2992211; border: 1px solid #d2992266; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #e3b341; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+.info-banner { background: #1f6feb11; border: 1px solid #1f6feb44; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #58a6ff; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+.ok-banner  { background: #1a7f3711; border: 1px solid #2ea04366; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #3fb950; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+.banner-icon { flex-shrink: 0; font-size: 12px; }
+.banner-text { line-height: 1.5; }
+.banner-text strong { display: block; margin-bottom: 2px; }
+.badge { font-size: 9px; padding: 2px 7px; border-radius: 3px; font-family: 'Courier New', monospace; font-weight: bold; }
+.badge-err  { background: #da363322; border: 1px solid #f85149; color: #f85149; }
+.badge-warn { background: #d2992211; border: 1px solid #d29922; color: #e3b341; }
+.badge-ok   { background: #1a7f3733; border: 1px solid #2ea043; color: #3fb950; }
+.badge-info { background: #1f6feb22; border: 1px solid #1f6feb; color: #58a6ff; }
+code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 10px; color: #e6edf3; }
+</style>
+</head>
+<body>
+
+<h2>State 1 &#8212; Worker output: inline error lines</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">worker output</span><span class="badge badge-err">error</span></div>
+  <div class="pb">
+    <div class="log-line"><span class="g">&#8250;</span> <span class="d">Reading task.md...</span></div>
+    <div class="log-line"><span class="g">&#8250;</span> <span class="d">Running npm test...</span></div>
+    <div class="log-line"><span class="r">&#10007;</span> <span class="r">FAIL src/services/TaskService.test.ts</span></div>
+    <div class="log-line"><span class="r">&#10007;</span> <span class="r">&nbsp;&nbsp;TypeError: Cannot read property 'title' of undefined</span></div>
+    <div class="log-line"><span class="r">&#10007;</span> <span class="r">&nbsp;&nbsp;at TaskService.createTask (TaskService.ts:12:18)</span></div>
+    <div class="log-line"><span class="y">&#9888;</span> <span class="y">&nbsp;&nbsp;3 tests failed, 9 passed</span></div>
+    <div class="log-line"><span class="g">&#8250;</span> <span class="d">Writing work-summary.txt &#8212; task not completed</span></div>
+  </div>
+</div>
+
+<h2>State 2 &#8212; Worker crashed (non-zero exit)</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">worker output</span><span class="badge badge-err">crashed</span></div>
+  <div class="pb">
+    <div class="err-banner">
+      <span class="banner-icon">&#10007;</span>
+      <div class="banner-text"><strong>Worker exited with code 1</strong>Claude Code process terminated unexpectedly. The iteration was interrupted.</div>
+    </div>
+    <div class="log-line"><span class="g">&#8250;</span> <span class="d">Reading task.md...</span></div>
+    <div class="log-line"><span class="r">&#10007;</span> <span class="r">Error: EACCES: permission denied, open 'src/services/TaskService.ts'</span></div>
+    <div class="log-line"><span class="r">&#10007;</span> <span class="r">Process exited with code 1</span></div>
+  </div>
+</div>
+
+<h2>State 3 &#8212; Layer failed: provider error</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">review pipeline</span><span class="badge badge-err">L3 failed</span></div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="layer"><div class="lbox done">L1</div><div class="llabel">sensitivity</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox done">L2</div><div class="llabel">protocol</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox error">L3</div><div class="llabel">quality</div></div>
+      <div class="arr red">&#8250;</div>
+      <div class="layer"><div class="lbox skip">L4</div><div class="llabel">governance</div></div>
+    </div>
+    <div class="err-banner" style="margin-top:10px;margin-bottom:0;">
+      <span class="banner-icon">&#10007;</span>
+      <div class="banner-text"><strong>L3 provider error &#8212; openai-standard returned HTTP 429</strong>Rate limit exceeded. Attempting fallback to gemini-flash...</div>
+    </div>
+    <div class="status-row">
+      <span>L2: <span style="color:#3fb950;">PASS</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>L3: <span style="color:#f85149;">ERROR</span> <span style="color:#484f58;">openai-standard &#183; rate limit</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span style="color:#e3b341;">retrying with gemini-flash...</span>
+    </div>
+  </div>
+</div>
+
+<h2>State 4 &#8212; Provider fallback (warning, not error)</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">review pipeline</span><span class="badge badge-warn">fallback</span></div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="layer"><div class="lbox done">L1</div><div class="llabel">sensitivity</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox done">L2</div><div class="llabel">protocol</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox warn">L3</div><div class="llabel">quality</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox wait">L4</div><div class="llabel">governance</div></div>
+    </div>
+    <div class="warn-banner" style="margin-top:10px;margin-bottom:0;">
+      <span class="banner-icon">&#9888;</span>
+      <div class="banner-text"><strong>L3 fallback &#8212; openai-standard unavailable, using gemini-flash</strong>Review continued with fallback provider. Result may differ from primary.</div>
+    </div>
+    <div class="status-row">
+      <span>L3: <span style="color:#e3b341;">REVISE</span> <span style="color:#484f58;">gemini-flash (fallback)</span></span>
+    </div>
+  </div>
+</div>
+
+<h2>State 5 &#8212; L1 escalation to L4</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">review pipeline</span><span class="badge badge-info">L1 escalated</span></div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="layer"><div class="lbox warn">L1</div><div class="llabel">sensitivity</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox skip">L2</div><div class="llabel">protocol</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox skip">L3</div><div class="llabel">quality</div></div>
+      <div class="arr">&#8250;</div>
+      <div class="layer"><div class="lbox active">L4</div><div class="llabel">governance</div></div>
+    </div>
+    <div class="info-banner" style="margin-top:10px;margin-bottom:0;">
+      <span class="banner-icon">&#8593;</span>
+      <div class="banner-text"><strong>L1 detected sensitive files &#8212; escalated directly to L4</strong>Modified: CLAUDE.md, docs/DECISIONS.md &#183; L2 and L3 skipped.</div>
+    </div>
+    <div class="status-row">
+      <span>L1: <span style="color:#e3b341;">sensitive</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>L2/L3: <span style="color:#484f58;">skipped</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>L4: <span style="color:#58a6ff;">reviewing...</span></span>
+    </div>
+  </div>
+</div>
+
+<h2>State 6 &#8212; BLOCKED (terminal state)</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">loop ended</span><span class="badge badge-err">blocked</span></div>
+  <div class="pb">
+    <div class="err-banner" style="margin-bottom:8px;">
+      <span class="banner-icon">&#10007;</span>
+      <div class="banner-text">
+        <strong>BLOCKED &#8212; max iterations reached without SHIP</strong>
+        3 of 3 iterations completed. Worker did not converge on a solution.<br>
+        <span style="color:#484f58;font-size:10px;">Suggestion: decompose the task or clarify success criteria.</span>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#8b949e;display:flex;gap:12px;">
+      <span>iterations: <span style="color:#e6edf3;">3 / 3</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>reviewer cost: <span style="color:#e6edf3;">$0.0089</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>elapsed: <span style="color:#e6edf3;">12:34</span></span>
+    </div>
+  </div>
+</div>
+
+<h2>State 7 &#8212; SHIPPED (terminal success state)</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">loop ended</span><span class="badge badge-ok">shipped</span></div>
+  <div class="pb">
+    <div class="ok-banner" style="margin-bottom:8px;">
+      <span class="banner-icon">&#10003;</span>
+      <div class="banner-text">
+        <strong>SHIPPED &#8212; task completed successfully</strong>
+        Worker delivered approved work after 2 iterations.<br>
+        <span style="color:#484f58;font-size:10px;">All review layers passed. Changes ready to commit.</span>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#8b949e;display:flex;gap:12px;">
+      <span>iterations: <span style="color:#e6edf3;">2 / 3</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>reviewer cost: <span style="color:#3fb950;">$0.0023</span></span>
+      <span style="color:#30363d;">&#183;</span>
+      <span>elapsed: <span style="color:#e6edf3;">8:14</span></span>
+    </div>
+  </div>
+</div>
+
+<h2>State 8 &#8212; Budget exhausted</h2>
+<div class="panel">
+  <div class="ph"><span class="pt">cost guard</span><span class="badge badge-warn">budget reached</span></div>
+  <div class="pb">
+    <div class="warn-banner" style="margin-bottom:0;">
+      <span class="banner-icon">&#9888;</span>
+      <div class="banner-text"><strong>Reviewer budget exhausted &#8212; $0.50 / $0.50 used</strong>Loop stopped to prevent overspend. Increase budget with <code>--budget</code> to continue.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
