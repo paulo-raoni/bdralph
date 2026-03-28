@@ -1980,8 +1980,9 @@ SAFETY CONSTRAINTS (mandatory, never violate):
   WORKER_MODEL_FLAG=$(get_worker_model_flag)
   # shellcheck disable=SC2086
   if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
+    printf '\n── Iteration %d ──\n' "$i" >> "$UI_WORKER_OUTPUT_FILE"
     echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
-      | tee "$UI_WORKER_OUTPUT_FILE" > "$WORKER_STDOUT_FILE"
+      | tee -a "$UI_WORKER_OUTPUT_FILE" > "$WORKER_STDOUT_FILE"
   else
     echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
       | tee "$WORKER_STDOUT_FILE"

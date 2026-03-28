@@ -439,9 +439,10 @@ export function buildDashboardState(
     { layer: "L4" as const, state: "wait" as const },
   ];
 
-  // Worker output — cascade through available sources
+  // Worker output — use worker output file (appends across iterations) as
+  // primary source, with fallbacks for non-UI and trace-only modes.
   let workerOutputText = "";
-  // 1. UI state prefix worker output (richest live source)
+  // 1. UI state prefix worker output (accumulates across iterations via tee -a)
   if (uiStatePrefix) {
     workerOutputText = safeReadFile(`${uiStatePrefix}_worker_output.txt`);
   }
