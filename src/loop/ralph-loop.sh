@@ -2143,10 +2143,14 @@ REVISE: [one paragraph of specific actionable feedback]"
   # ── OPERATOR STOP CHECKS ──
   if [ "$STOP_AFTER_THIS" = "true" ]; then
     status_echo "🛑 Stopping after this iteration (operator signal)."
+    echo "STOPPED" > "$RALPH_DIR/review-result.txt"
+    echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
     break
   fi
   if [ "$STOP_ON_FAIL" = "true" ] && [ "$RESULT" = "REVISE" ]; then
     status_echo "🛑 Stopping on failure (operator signal)."
+    echo "STOPPED" > "$RALPH_DIR/review-result.txt"
+    echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
     break
   fi
 
@@ -2219,6 +2223,9 @@ EOF
 done
 
 # ── ON MAX ITERATIONS REACHED ──
+echo "BLOCKED" > "$RALPH_DIR/review-result.txt"
+echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
+
 if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
   ui_show_banner "✗ BLOCKED" "max iterations reached"
 else
