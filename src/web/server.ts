@@ -70,9 +70,22 @@ function broadcastState(): void {
 let lastBroadcastedState: string | null = null;
 let terminalBroadcastCount = 0;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
+let lastTerminalState: string | null = null;
+let pollingActive = true;
+let lastTerminalTaskHash = "";
+
+function taskHash(stateJson: string): string {
+  try {
+    const s = JSON.parse(stateJson);
+    return `${s.task}::${s.maxIterations}`;
+  } catch {
+    return "";
+  }
+}
 
 function startPolling(): void {
   if (pollInterval) return;
+  pollingActive = true;
   pollInterval = setInterval(() => {
     if (sseClients.size === 0) return;
     const data = getState();
@@ -88,7 +101,7 @@ function startPolling(): void {
       lastBroadcastedState = data;
       terminalBroadcastCount = 0;
     } else {
-      // Check if terminal — broadcast a few more times to ensure delivery, then stop
+      // Check if terminal — broadcast a few more times to ensure delivery, then stop permanently
       const state = JSON.parse(data);
       const isTerminal =
         state.status === "shipped" ||
@@ -107,6 +120,9 @@ function startPolling(): void {
         } else {
           clearInterval(pollInterval!);
           pollInterval = null;
+          pollingActive = false;
+          lastTerminalState = data;
+          lastTerminalTaskHash = taskHash(data);
         }
       }
     }
@@ -172,17 +188,36 @@ const server = http.createServer((req, res) => {
       Connection: "keep-alive",
     });
 
-    // Send current state immediately
-    const data = getState();
-    res.write(`data: ${data}\n\n`);
-
     sseClients.add(res);
 
-    // Restart polling if stopped (e.g. after terminal state of previous run)
-    if (!pollInterval) {
-      lastBroadcastedState = null;
-      terminalBroadcastCount = 0;
-      startPolling();
+    if (!pollingActive && lastTerminalState) {
+      // Polling was stopped after terminal state — check if a new session started
+      const liveData = getState();
+      const liveState = JSON.parse(liveData);
+      const liveHash = taskHash(liveData);
+      if (liveState.status === "running" && liveHash !== lastTerminalTaskHash) {
+        // New session detected — clear cached state and restart polling
+        lastTerminalState = null;
+        lastTerminalTaskHash = "";
+        lastBroadcastedState = null;
+        terminalBroadcastCount = 0;
+        res.write(`data: ${liveData}\n\n`);
+        startPolling();
+      } else {
+        // Same session or idle — serve cached terminal state, don't restart polling
+        res.write(`data: ${lastTerminalState}\n\n`);
+      }
+    } else {
+      // Normal operation — send current state
+      const data = getState();
+      res.write(`data: ${data}\n\n`);
+
+      // Restart polling if stopped for non-terminal reasons
+      if (!pollInterval) {
+        lastBroadcastedState = null;
+        terminalBroadcastCount = 0;
+        startPolling();
+      }
     }
 
     req.on("close", () => {
@@ -283,4 +318,4 @@ process.on("SIGINT", shutdown);
 
 // --- Export for testing ---
 
-export { server, port, ralphDir, sseClients, broadcastState, getState };
+export { server, port, ralphDir, sseClients, broadcastState, getState, pollingActive, lastTerminalState };
