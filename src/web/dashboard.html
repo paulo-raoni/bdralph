@@ -343,11 +343,11 @@ function sendAsk() {
   const text = ta.value.trim();
   if (!text) return;
   const btn = document.querySelector('.btn-ask');
-  btn.textContent = '\u27F3 thinking...';
+  btn.textContent = '\u27F3 sending...';
   btn.disabled = true;
   var smEl = document.getElementById('smMessages');
-  smEl.innerHTML = '<div class="sm-thinking">&#x27F3; Second Mind is thinking\u2026</div>';
-  document.getElementById('smCount').textContent = 'thinking\u2026';
+  smEl.innerHTML = '<div class="sm-thinking">&#x23F3; Waiting for loop to process\u2026</div>';
+  document.getElementById('smCount').textContent = 'pending\u2026';
   ta.value = '';
   fetch('/ask', { method: 'POST', body: text }).then(() => {
     btn.textContent = 'sent \u2713';

@@ -2,10 +2,8 @@ import * as http from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import * as https from "node:https";
 import {
   buildDashboardState,
-  buildSecondMindContext,
   type BuildStateOptions,
 } from "./state.js";
 
@@ -180,63 +178,6 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
-// --- Anthropic API for Second Mind ---
-
-function callAnthropicAPI(
-  apiKey: string,
-  question: string,
-  context: string
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system:
-        "You are Second Mind, a context-aware advisor for the bdralph agentic loop. " +
-        "You have access to the full session context including traces, work summaries, " +
-        "and review results. Answer operator questions concisely and helpfully. " +
-        "Focus on actionable suggestions.",
-      messages: [
-        {
-          role: "user",
-          content: `Context:\n${context}\n\nQuestion: ${question}`,
-        },
-      ],
-    });
-
-    const req = https.request(
-      {
-        hostname: "api.anthropic.com",
-        path: "/v1/messages",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "Content-Length": Buffer.byteLength(body),
-        },
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (chunk: Buffer) => chunks.push(chunk));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-            const text =
-              data.content?.[0]?.text ?? "No response from Second Mind.";
-            resolve(text);
-          } catch {
-            reject(new Error("Failed to parse API response"));
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
 // --- HTTP server ---
 
 const server = http.createServer((req, res) => {
@@ -318,44 +259,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /ask — process via Anthropic API directly + signal loop
+  // POST /ask — write operator signal for the loop to process
   if (req.method === "POST" && url.pathname === "/ask") {
     readBody(req).then((question) => {
-      // Write signal for the loop (if running, it will pick it up)
-      const signalPath = path.join(ralphDir, "operator-signal.json");
-      fs.mkdirSync(path.dirname(signalPath), { recursive: true });
-      fs.writeFileSync(
-        signalPath,
-        JSON.stringify({ action: "message", content: question }) + "\n"
-      );
-
-      // Process directly via Anthropic API
-      const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
-      if (!apiKey) {
-        const smPath = path.join(ralphDir, "second-mind-response.txt");
+      if (question.trim()) {
+        const signalPath = path.join(ralphDir, "operator-signal.json");
+        fs.mkdirSync(path.dirname(signalPath), { recursive: true });
         fs.writeFileSync(
-          smPath,
-          "Second Mind unavailable: ANTHROPIC_API_KEY not set."
+          signalPath,
+          JSON.stringify({ action: "message", content: question }) + "\n"
         );
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-        return;
       }
-
-      const context = buildSecondMindContext(ralphDir);
-      callAnthropicAPI(apiKey, question, context)
-        .then((response) => {
-          const smPath = path.join(ralphDir, "second-mind-response.txt");
-          fs.writeFileSync(smPath, response);
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
-        })
-        .catch(() => {
-          const smPath = path.join(ralphDir, "second-mind-response.txt");
-          fs.writeFileSync(smPath, "Second Mind error: API call failed.");
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
-        });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
     });
     return;
   }
