@@ -525,19 +525,42 @@ function updateDashboard(state) {
 
   // Second Mind
   const smEl = document.getElementById('smMessages');
+  var smParts = [];
+
+  // Pending question indicator
+  if (state.pendingQuestion && !state.questionProcessed) {
+    var pendingHtml = '<div class="sm-msg" style="border-color:#d2992266;background:#d2992211;">' +
+      '<div class="trigger" style="color:#e3b341;">&#x23F3; waiting for next iteration</div>' +
+      '<span style="color:#c9d1d9;">' + esc(state.pendingQuestion) + '</span></div>';
+    smParts.push(pendingHtml);
+  }
+
+  // Check if loop ended without processing the question
+  var isTerminalStatus = state.status === 'shipped' || state.status === 'blocked' || state.status === 'stopped';
+  if (state.pendingQuestion && !state.questionProcessed && isTerminalStatus) {
+    smParts = ['<div class="sm-msg" style="border-color:#f8514966;background:#da363311;">' +
+      '<div class="trigger" style="color:#f85149;">loop ended before processing your question</div>' +
+      '<span style="color:#8b949e;">' + esc(state.pendingQuestion) + '</span></div>'];
+  }
+
   if (state.secondMind && state.secondMind.length > 0) {
-    smEl.innerHTML = state.secondMind.map(function(msg) {
+    state.secondMind.forEach(function(msg) {
       var isUnavailable = msg.text && (msg.text.indexOf('ANTHROPIC_API_KEY not set') !== -1 || msg.text.indexOf('unavailable') !== -1);
+      var originLabel = msg.origin === 'auto' ? '<span style="color:#484f58;font-size:10px;margin-left:4px;">[auto]</span>'
+        : msg.origin === 'ask' ? '<span style="color:#58a6ff;font-size:10px;margin-left:4px;">[response]</span>'
+        : '';
       var bodyHtml = isUnavailable
         ? '<span style="color:#e3b341">&#x26A0; ' + esc(msg.text) + '</span>'
         : esc(msg.text);
-      return '<div class="sm-msg"><div class="trigger">' + esc(msg.trigger) + '</div>' + bodyHtml + '</div>';
-    }).join('');
+      smParts.push('<div class="sm-msg"><div class="trigger">' + esc(msg.trigger) + originLabel + '</div>' + bodyHtml + '</div>');
+    });
     document.getElementById('smCount').textContent = state.secondMind.length + ' response' + (state.secondMind.length !== 1 ? 's' : '');
-  } else {
-    smEl.innerHTML = '<div style="font-size:11px;color:#484f58;padding:8px 0;">No responses yet.</div>';
+  } else if (smParts.length === 0) {
+    smParts.push('<div style="font-size:11px;color:#484f58;padding:8px 0;">No responses yet.</div>');
     document.getElementById('smCount').textContent = '0 responses';
   }
+
+  smEl.innerHTML = smParts.join('');
 }
 
 // --- SSE connection ---
