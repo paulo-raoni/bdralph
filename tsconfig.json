@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "vitest.e2e.config.ts", "vitest.config.ts"]
+  "include": ["src", "tests", "vitest.e2e.config.ts", "vitest.config.ts", "vitest.web.config.ts"]
 }

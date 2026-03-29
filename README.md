@@ -48,7 +48,10 @@ npm link   # makes `bdralph` available in PATH
 ## Quick start
 
 ```bash
-# Headless mode (recommended while Ink panel issues are being resolved)
+# Web UI dashboard (recommended — works everywhere, including devcontainer)
+bdralph "Add input validation to UserService" --max 5 --web-ui
+
+# Headless mode (no UI, plain text output)
 BDRALPH_NO_UI=1 bdralph "Add input validation to UserService" --max 5
 
 # With Ink panel (requires a real TTY — does not work in devcontainer)
@@ -126,6 +129,7 @@ bdralph <task|task-file> [options]
 | `--worker sonnet\|opus\|auto` | sonnet | Worker model |
 | `--escalate-after N` | 3 | Consecutive REVISEs before L4 escalation |
 | `--reviewer-mode pipeline\|single` | pipeline | Review strategy |
+| `--web-ui` | - | Enable web UI dashboard at `http://localhost:7340` |
 
 ### Stop controls
 
@@ -154,7 +158,9 @@ and when L4 emits consecutive REVISEs.
 
 | Variable | Default | Description |
 |---|---|---|
-| `BDRALPH_NO_UI` | - | Set to `1` to disable Ink panel (use in CI or devcontainer) |
+| `BDRALPH_NO_UI` | - | Set to `1` to disable all UI (use in CI) |
+| `BDRALPH_WEB_UI` | - | Set to `1` to enable web UI dashboard |
+| `BDRALPH_WEB_PORT` | `7340` | Web UI server port |
 | `BDRALPH_BUDGET` | `0.50` | Session budget in USD |
 | `BDRALPH_TRACE_HISTORY` | `3` | L4 traces injected into worker prompt per iteration |
 
@@ -273,6 +279,10 @@ src/
       ralph-ink-helpers.ts   <- pure helper functions (testable)
     providers/
       gemini.ts              <- native Gemini SDK provider
+  web/
+    server.ts                <- HTTP + SSE server for web UI dashboard
+    state.ts                 <- pure functions: read state files → DashboardState
+    dashboard.html           <- single-file browser dashboard (CSS + JS inline)
 
 docs/
   architecture.md            <- component map and design
@@ -329,13 +339,15 @@ TTY (teletypewriter) is the device that connects a process to an interactive ter
 
 In devcontainer environments, `/dev/tty` exists in the filesystem but is not actually connected to a terminal (the underlying device returns ENXIO — "No such device or address" — when opened). The Ink process crashes immediately on startup.
 
-**Workaround:** use `BDRALPH_NO_UI=1` in devcontainer environments.
+**Solution:** use the web UI dashboard (`--web-ui`), which works everywhere:
 
 ```bash
-BDRALPH_NO_UI=1 bdralph "your task" --max 5
+bdralph "your task" --max 5 --web-ui
 ```
 
-The loop runs fully in this mode — all features work. The only difference is output: instead of the Ink panel, bdralph prints iteration progress and results as plain text.
+The web UI provides a full dashboard at `http://localhost:7340` with live SSE updates, pipeline visualization, worker output, stop controls, and Second Mind — no TTY required.
+
+**Alternative:** use `BDRALPH_NO_UI=1` for plain text output (no dashboard).
 
 ### Worker iterations are slow
 

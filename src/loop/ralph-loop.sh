@@ -170,6 +170,7 @@ fi
 # --- UI auto-detect ---
 UI_ENABLED=true
 if [ "${BDRALPH_NO_UI:-}" = "1" ]; then UI_ENABLED=false
+elif [ "${BDRALPH_WEB_UI:-}" = "1" ]; then UI_ENABLED=false
 elif [ ! -t 1 ]; then UI_ENABLED=false
 elif [ "${TERM:-}" = "dumb" ] || [ -z "${TERM:-}" ]; then UI_ENABLED=false
 fi
@@ -194,7 +195,7 @@ UI_STATE_ENABLED="$UI_ENABLED"
 RALPH_INK_ACTIVE=false
 INK_RENDERER_PID=""
 INK_HAS_TTY=false
-if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
+if [ "${BDRALPH_INK_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ] && [ "${BDRALPH_WEB_UI:-}" != "1" ] && [ "${TERM:-}" != "dumb" ] && [ -n "${TERM:-}" ] && (exec 3>/dev/tty) 2>/dev/null; then
   INK_HAS_TTY=true
 fi
 
@@ -217,6 +218,21 @@ if [ "$INK_HAS_TTY" = "true" ] || { [ -n "${BDRALPH_INK_CAPTURE_FILE:-}" ] && [ 
     fi
   fi
   INK_RENDERER_PID=$!
+fi
+
+# --- web UI server ---
+# BDRALPH_WEB_UI=1 starts a lightweight HTTP server with SSE for a browser dashboard.
+WEB_SERVER_PID=""
+if [ "${BDRALPH_WEB_UI:-}" = "1" ] && [ "${BDRALPH_NO_UI:-}" != "1" ]; then
+  BDRALPH_WEB_PORT="${BDRALPH_WEB_PORT:-7340}"
+  node --import tsx "$LOOP_DIR/../web/server.ts" \
+    --ralph-dir "$RALPH_DIR" \
+    --port "$BDRALPH_WEB_PORT" \
+    --logs-dir "$LOGS_DIR" \
+    --ui-state-prefix "$UI_STATE_PREFIX" &
+  WEB_SERVER_PID=$!
+  UI_STATE_ENABLED=true
+  echo "[bdralph] web UI → http://localhost:$BDRALPH_WEB_PORT" >&2
 fi
 
 status_echo() {
@@ -791,6 +807,14 @@ ui_cleanup() {
   if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "${INK_RENDERER_PID:-}" ]; then
     kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
     wait "$INK_RENDERER_PID" 2>/dev/null || true
+  fi
+
+  if [ -n "${WEB_SERVER_PID:-}" ]; then
+    # Give the server time to poll and push final terminal state to SSE clients
+    # (terminal poll runs every 2s — wait long enough for at least one cycle)
+    sleep 3
+    kill "$WEB_SERVER_PID" 2>/dev/null || true
+    wait "$WEB_SERVER_PID" 2>/dev/null || true
   fi
 
   if [ "$UI_ENABLED" = "true" ]; then
@@ -1957,8 +1981,9 @@ SAFETY CONSTRAINTS (mandatory, never violate):
   WORKER_MODEL_FLAG=$(get_worker_model_flag)
   # shellcheck disable=SC2086
   if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
+    printf '\n── Iteration %d ──\n' "$i" >> "$UI_WORKER_OUTPUT_FILE"
     echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
-      | tee "$UI_WORKER_OUTPUT_FILE" > "$WORKER_STDOUT_FILE"
+      | tee -a "$UI_WORKER_OUTPUT_FILE" > "$WORKER_STDOUT_FILE"
   else
     echo "$WORK_PROMPT" | claude -p --dangerously-skip-permissions $WORKER_MODEL_FLAG 2>&1 \
       | tee "$WORKER_STDOUT_FILE"
@@ -2119,10 +2144,14 @@ REVISE: [one paragraph of specific actionable feedback]"
   # ── OPERATOR STOP CHECKS ──
   if [ "$STOP_AFTER_THIS" = "true" ]; then
     status_echo "🛑 Stopping after this iteration (operator signal)."
+    echo "STOPPED" > "$RALPH_DIR/review-result.txt"
+    echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
     break
   fi
   if [ "$STOP_ON_FAIL" = "true" ] && [ "$RESULT" = "REVISE" ]; then
     status_echo "🛑 Stopping on failure (operator signal)."
+    echo "STOPPED" > "$RALPH_DIR/review-result.txt"
+    echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
     break
   fi
 
@@ -2195,6 +2224,9 @@ EOF
 done
 
 # ── ON MAX ITERATIONS REACHED ──
+echo "BLOCKED" > "$RALPH_DIR/review-result.txt"
+echo "COMPLETE: $(date -Iseconds)" > "$RALPH_DIR/.bdralph-complete"
+
 if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
   ui_show_banner "✗ BLOCKED" "max iterations reached"
 else
@@ -2220,5 +2252,12 @@ fi
 if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "$INK_RENDERER_PID" ]; then
   kill -- -"$INK_RENDERER_PID" 2>/dev/null || kill "$INK_RENDERER_PID" 2>/dev/null || true
   wait "$INK_RENDERER_PID" 2>/dev/null || true
+fi
+
+# --- web server cleanup ---
+if [ -n "${WEB_SERVER_PID:-}" ]; then
+  sleep 3
+  kill "$WEB_SERVER_PID" 2>/dev/null || true
+  wait "$WEB_SERVER_PID" 2>/dev/null || true
 fi
 exit 1
