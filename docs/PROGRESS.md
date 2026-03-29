@@ -31,6 +31,12 @@
 | fix(loop): BDRALPH_RALPH_DIR and BDRALPH_LOGS_DIR env overrides | #31 | ✅ `RALPH_DIR` and `LOGS_DIR` now read from `BDRALPH_RALPH_DIR` / `BDRALPH_LOGS_DIR` env vars with original values as defaults. Enables per-test tmpDir isolation. `npm test` ✅ (83), `npm run lint` ✅, `npm run typecheck` ✅. |
 | feat(e2e): E2E Nível 1 — headless mock loop tests | #32 | ✅ 10 E2E headless tests covering SHIP, BLOCKED, stop controls, Second Mind, L1 escalation, SHIP-ON-FAILURE, session cleanup, traces, cost guard. 3 spec corrections applied by executor. E2E-L1-08 confirmed stale-signal cleanup already exists. `npm test` ✅ (83), `npm run test:e2e:headless` ✅ (10), `npm run lint` ✅, `npm run typecheck` ✅. |
 
+### Congelamento (2026-03)
+
+Projeto pausado após merge do fix/web-ui-post-merge (Bug 1, 2, 3 do web UI).
+Gates automatizados passam. Validação visual não realizada antes do freeze.
+Retomada: verificar bugs visuais conforme checklist no PR de congelamento.
+
 ## Notes
 
 - Repo created and bootstrapped. devcontainer operational.
