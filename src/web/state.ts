@@ -21,6 +21,7 @@ export interface WorkerOutputLine {
 export interface SecondMindMessage {
   trigger: string;
   text: string;
+  origin: "auto" | "ask" | "unknown";
 }
 
 export interface TerminalState {
@@ -46,6 +47,8 @@ export interface DashboardState {
   workerOutput: WorkerOutputLine[];
   secondMind: SecondMindMessage[];
   terminalState?: TerminalState;
+  pendingQuestion: string | null;
+  questionProcessed: boolean;
 }
 
 // --- File reading helpers ---
@@ -323,6 +326,25 @@ function buildTerminalState(
 
 // --- Second Mind ---
 
+interface OperatorSignal {
+  action?: string;
+  content?: string;
+}
+
+function readPendingQuestion(ralphDir: string): {
+  pendingQuestion: string | null;
+  questionProcessed: boolean;
+} {
+  const signalPath = path.join(ralphDir, "operator-signal.json");
+  const signal = safeReadJson<OperatorSignal>(signalPath);
+  if (signal && signal.action === "message" && signal.content) {
+    // Signal file exists with an ask — loop hasn't processed it yet
+    return { pendingQuestion: signal.content, questionProcessed: false };
+  }
+  // No signal or non-ask signal — question either processed or never sent
+  return { pendingQuestion: null, questionProcessed: true };
+}
+
 function readSecondMind(ralphDir: string): SecondMindMessage[] {
   const smFile = path.join(ralphDir, "second-mind-response.txt");
   const taskFile = path.join(ralphDir, "task.md");
@@ -340,7 +362,15 @@ function readSecondMind(ralphDir: string): SecondMindMessage[] {
     // If stat fails, include the response anyway
   }
 
-  return [{ trigger: "second mind", text: content }];
+  // Detect origin: auto-threshold responses contain "CLASSIFICATION:" pattern,
+  // explicit ask responses are triggered by operator questions
+  const isAutoThreshold =
+    /CLASSIFICATION:/i.test(content) || /^PASS\b/im.test(content);
+  const origin: SecondMindMessage["origin"] = isAutoThreshold
+    ? "auto"
+    : "ask";
+
+  return [{ trigger: "second mind", text: content, origin }];
 }
 
 // --- Second Mind context builder (exported for server API use) ---
@@ -495,6 +525,9 @@ export function buildDashboardState(
   // Second Mind
   const secondMind = readSecondMind(ralphDir);
 
+  // Pending question
+  const { pendingQuestion, questionProcessed } = readPendingQuestion(ralphDir);
+
   // Terminal state
   const terminalState = buildTerminalState(
     status,
@@ -519,5 +552,7 @@ export function buildDashboardState(
     workerOutput,
     secondMind,
     terminalState,
+    pendingQuestion,
+    questionProcessed,
   };
 }
