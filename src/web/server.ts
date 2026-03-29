@@ -65,57 +65,52 @@ function broadcastState(): void {
   }
 }
 
-// --- File watcher ---
+// --- Unified polling (replaces fs.watch which is unreliable in Linux/Docker) ---
 
-let watchDebounce: ReturnType<typeof setTimeout> | null = null;
-const watchers: fs.FSWatcher[] = [];
-let watchersActive = false;
+let lastBroadcastedState: string | null = null;
+let terminalBroadcastCount = 0;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-function closeAllWatchers(): void {
-  for (const w of watchers) {
-    try {
-      w.close();
-    } catch {
-      // ignore
-    }
-  }
-  watchers.length = 0;
-  watchersActive = false;
-}
+function startPolling(): void {
+  if (pollInterval) return;
+  pollInterval = setInterval(() => {
+    if (sseClients.size === 0) return;
+    const data = getState();
 
-function startFileWatcher(): void {
-  if (watchersActive) return;
-  watchersActive = true;
-
-  // Watch RALPH_DIR for changes
-  try {
-    const w = fs.watch(ralphDir, { recursive: true }, () => {
-      if (watchDebounce) clearTimeout(watchDebounce);
-      watchDebounce = setTimeout(broadcastState, 300);
-    });
-    watchers.push(w);
-  } catch {
-    // Directory might not exist yet — that's fine
-  }
-
-  // Watch UI state files if prefix is set
-  if (uiStatePrefix) {
-    const prefixDir = path.dirname(uiStatePrefix);
-    try {
-      const w = fs.watch(prefixDir, (_event, filename) => {
-        if (
-          filename &&
-          filename.startsWith(path.basename(uiStatePrefix as string))
-        ) {
-          if (watchDebounce) clearTimeout(watchDebounce);
-          watchDebounce = setTimeout(broadcastState, 300);
+    if (data !== lastBroadcastedState) {
+      for (const client of sseClients) {
+        try {
+          client.write(`data: ${data}\n\n`);
+        } catch {
+          sseClients.delete(client);
         }
-      });
-      watchers.push(w);
-    } catch {
-      // TMPDIR watch may fail — non-critical
+      }
+      lastBroadcastedState = data;
+      terminalBroadcastCount = 0;
+    } else {
+      // Check if terminal — broadcast a few more times to ensure delivery, then stop
+      const state = JSON.parse(data);
+      const isTerminal =
+        state.status === "shipped" ||
+        state.status === "blocked" ||
+        state.status === "stopped";
+      if (isTerminal) {
+        terminalBroadcastCount++;
+        if (terminalBroadcastCount <= 3) {
+          for (const client of sseClients) {
+            try {
+              client.write(`data: ${data}\n\n`);
+            } catch {
+              sseClients.delete(client);
+            }
+          }
+        } else {
+          clearInterval(pollInterval!);
+          pollInterval = null;
+        }
+      }
     }
-  }
+  }, 1500);
 }
 
 // --- Keep-alive ping ---
@@ -130,42 +125,6 @@ function startPingInterval(): void {
       }
     }
   }, 15_000);
-}
-
-// --- Terminal state fallback poll ---
-// fs.watch may miss the final file writes before the loop process exits.
-// Poll every 2s to ensure terminal state (shipped/blocked/stopped) reaches clients.
-// Once terminal state is broadcast, stop polling and close watchers.
-
-let terminalPollId: ReturnType<typeof setInterval> | null = null;
-
-function startTerminalPoll(): void {
-  if (terminalPollId) return;
-  terminalPollId = setInterval(() => {
-    if (sseClients.size === 0) return;
-    const opts: BuildStateOptions = { ralphDir };
-    if (uiStatePrefix) opts.uiStatePrefix = uiStatePrefix;
-    if (logsDir) opts.logsDir = logsDir;
-    const state = buildDashboardState(opts);
-    const isTerminal =
-      state.status === "shipped" ||
-      state.status === "blocked" ||
-      state.status === "stopped";
-    if (isTerminal) {
-      const data = JSON.stringify(state);
-      for (const client of sseClients) {
-        try {
-          client.write(`data: ${data}\n\n`);
-        } catch {
-          sseClients.delete(client);
-        }
-      }
-      // Stop polling and close file watchers — terminal state is final
-      clearInterval(terminalPollId!);
-      terminalPollId = null;
-      closeAllWatchers();
-    }
-  }, 2000);
 }
 
 // --- Read request body ---
@@ -219,12 +178,11 @@ const server = http.createServer((req, res) => {
 
     sseClients.add(res);
 
-    // Restart watchers and poll if they were closed (e.g. after terminal state)
-    if (!watchersActive) {
-      startFileWatcher();
-    }
-    if (!terminalPollId) {
-      startTerminalPoll();
+    // Restart polling if stopped (e.g. after terminal state of previous run)
+    if (!pollInterval) {
+      lastBroadcastedState = null;
+      terminalBroadcastCount = 0;
+      startPolling();
     }
 
     req.on("close", () => {
@@ -286,9 +244,8 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   process.stderr.write(`bdralph web UI → http://localhost:${port}\n`);
 
-  startFileWatcher();
+  startPolling();
   startPingInterval();
-  startTerminalPoll();
 
   // Auto-open browser (fail silently)
   try {
