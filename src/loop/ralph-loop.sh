@@ -801,7 +801,6 @@ ui_cleanup() {
       kill "$UI_TIMER_PID" 2>/dev/null || true
       wait "$UI_TIMER_PID" 2>/dev/null || true
     fi
-    rm -f "${UI_STATE_PREFIX}"_*.txt "$UI_WORKER_OUTPUT_FILE"
   fi
 
   if [ "$RALPH_INK_ACTIVE" = "true" ] && [ -n "${INK_RENDERER_PID:-}" ]; then
@@ -815,6 +814,12 @@ ui_cleanup() {
     sleep 3
     kill "$WEB_SERVER_PID" 2>/dev/null || true
     wait "$WEB_SERVER_PID" 2>/dev/null || true
+  fi
+
+  # Delete UI state files AFTER the web server is killed, so it can read them
+  # during its grace period for the final terminal state broadcast.
+  if [ "${UI_STATE_ENABLED:-false}" = "true" ]; then
+    rm -f "${UI_STATE_PREFIX}"_*.txt "$UI_WORKER_OUTPUT_FILE"
   fi
 
   if [ "$UI_ENABLED" = "true" ]; then
